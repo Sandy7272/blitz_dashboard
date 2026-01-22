@@ -41,7 +41,7 @@ export function Sidebar() {
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className={`fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border z-50 flex flex-col transition-all duration-300 ${
+      className={`fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border z-50 hidden lg:flex flex-col transition-all duration-300 ${
         isCollapsed ? "w-20" : "w-64"
       }`}
     >
@@ -99,6 +99,15 @@ export function Sidebar() {
         </motion.div>
       )}
 
+      {/* Collapsed Credit Indicator */}
+      {isCollapsed && (
+        <div className="mx-3 mb-6">
+          <div className="p-3 rounded-xl bg-primary/10 text-center">
+            <Zap className="w-5 h-5 text-primary mx-auto" />
+          </div>
+        </div>
+      )}
+
       {/* Main Navigation */}
       <nav className="flex-1 px-3 space-y-1">
         {mainNavItems.map((item) => {
@@ -110,6 +119,7 @@ export function Sidebar() {
               className={`sidebar-item ${isActive ? "active" : ""} ${
                 isCollapsed ? "justify-center px-3" : ""
               }`}
+              title={isCollapsed ? item.label : undefined}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
               {!isCollapsed && <span>{item.label}</span>}
@@ -129,6 +139,7 @@ export function Sidebar() {
               className={`sidebar-item ${isActive ? "active" : ""} ${
                 isCollapsed ? "justify-center px-3" : ""
               }`}
+              title={isCollapsed ? item.label : undefined}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
               {!isCollapsed && <span>{item.label}</span>}
@@ -139,6 +150,7 @@ export function Sidebar() {
           className={`sidebar-item w-full text-destructive hover:bg-destructive/10 ${
             isCollapsed ? "justify-center px-3" : ""
           }`}
+          title={isCollapsed ? "Logout" : undefined}
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
           {!isCollapsed && <span>Logout</span>}
