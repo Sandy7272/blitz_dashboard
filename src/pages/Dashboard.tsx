@@ -42,11 +42,11 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       {/* Header */}
-      <div className="mb-10">
+      <div className="mb-6 md:mb-10">
         <motion.h1
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-3xl font-display font-bold text-foreground mb-2"
+          className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2"
         >
           Welcome back, Creator
         </motion.h1>
@@ -54,14 +54,14 @@ export default function Dashboard() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="text-muted-foreground"
+          className="text-sm md:text-base text-muted-foreground"
         >
           Choose a workflow to get started or continue your recent projects.
         </motion.p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-10">
         {stats.map((stat, index) => (
           <StatsCard
             key={stat.title}
@@ -72,16 +72,16 @@ export default function Dashboard() {
       </div>
 
       {/* Workflows Section */}
-      <div className="mb-8">
+      <div className="mb-6 md:mb-8">
         <motion.h2
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="text-xl font-display font-semibold text-foreground mb-6"
+          className="text-lg md:text-xl font-display font-semibold text-foreground mb-4 md:mb-6"
         >
           AI Workflows
         </motion.h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {workflows.map((workflow, index) => (
             <WorkflowCard
               key={workflow.title}

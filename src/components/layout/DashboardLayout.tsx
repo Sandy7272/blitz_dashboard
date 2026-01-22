@@ -1,4 +1,6 @@
 import { Sidebar } from "./Sidebar";
+import { MobileHeader } from "./MobileHeader";
+import { MobileBottomNav } from "./MobileBottomNav";
 import { motion } from "framer-motion";
 
 interface DashboardLayoutProps {
@@ -8,16 +10,29 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-background gradient-radial">
+      {/* Desktop Sidebar */}
       <Sidebar />
-      <main className="ml-64 min-h-screen p-8 transition-all duration-300">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          {children}
-        </motion.div>
+      
+      {/* Mobile Header */}
+      <MobileHeader />
+      
+      {/* Main Content */}
+      <main className="lg:ml-64 min-h-screen transition-all duration-300">
+        {/* Mobile top padding for fixed header */}
+        <div className="pt-16 pb-24 lg:pt-0 lg:pb-0">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="p-4 md:p-6 lg:p-8"
+          >
+            {children}
+          </motion.div>
+        </div>
       </main>
+      
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }

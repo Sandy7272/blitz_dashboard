@@ -29,20 +29,20 @@ export function StatsCard({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3, delay }}
-      className="glass-card p-6"
+      className="glass-card p-4 md:p-6"
     >
-      <div className="flex items-start justify-between mb-4">
-        <div className="p-3 rounded-xl bg-primary/10">
-          <Icon className="w-5 h-5 text-primary" />
+      <div className="flex items-start justify-between mb-3 md:mb-4">
+        <div className="p-2 md:p-3 rounded-xl bg-primary/10">
+          <Icon className="w-4 h-4 md:w-5 md:h-5 text-primary" />
         </div>
         {change && (
-          <span className={`text-sm font-medium ${changeColors[changeType]}`}>
+          <span className={`text-xs md:text-sm font-medium ${changeColors[changeType]}`}>
             {change}
           </span>
         )}
       </div>
-      <h4 className="text-sm text-muted-foreground mb-1">{title}</h4>
-      <p className="text-2xl font-display font-bold text-foreground">{value}</p>
+      <h4 className="text-xs md:text-sm text-muted-foreground mb-1">{title}</h4>
+      <p className="text-lg md:text-2xl font-display font-bold text-foreground">{value}</p>
     </motion.div>
   );
 }
