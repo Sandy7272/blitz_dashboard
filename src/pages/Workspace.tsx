@@ -10,10 +10,12 @@ import {
   X,
   Image as ImageIcon,
   Loader2,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Info
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-
+import { HintTooltip } from "@/components/onboarding/HintTooltip";
+import { FeatureTooltip } from "@/components/onboarding/FeatureTooltip";
 const workflowTypes = {
   apparel: {
     title: "Apparel Photography",
@@ -141,16 +143,27 @@ export default function Workspace() {
             className="space-y-6"
           >
             {/* Upload Zone / URL Input */}
-            <div className="glass-card p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-1">
-                {isAudit ? "Enter Website URL" : "Step 1: Upload Your Image"}
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {isAudit 
-                  ? "Paste the full URL of the website you want to audit" 
-                  : "We'll enhance it automatically using AI"
-                }
-              </p>
+            <HintTooltip 
+              id="workspace-upload-hint" 
+              hint="Start here! Upload any product image and our AI will enhance it automatically."
+              position="right"
+              delay={1000}
+            >
+              <div className="glass-card p-6">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-lg font-semibold text-foreground">
+                    {isAudit ? "Enter Website URL" : "Step 1: Upload Your Image"}
+                  </h3>
+                  <FeatureTooltip content="Supported formats: JPG, PNG, WebP. Max file size: 10MB" side="top">
+                    <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                  </FeatureTooltip>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {isAudit 
+                    ? "Paste the full URL of the website you want to audit" 
+                    : "We'll enhance it automatically using AI"
+                  }
+                </p>
 
               {isAudit ? (
                 <div className="space-y-2">
@@ -222,7 +235,8 @@ export default function Workspace() {
                   )}
                 </div>
               )}
-            </div>
+              </div>
+            </HintTooltip>
 
             {/* Generation Controls */}
             <div className="glass-card p-6">
