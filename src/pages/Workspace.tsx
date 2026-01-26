@@ -1,227 +1,281 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Link as LinkIcon, 
-  Wand2, 
-  Loader2,
-  Info,
-  Globe,
-  FileText,
-  CheckCircle2,
-  ArrowRight
-} from "lucide-react";
+import { motion } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
-import { FeatureTooltip } from "@/components/onboarding/FeatureTooltip";
+import { 
+  Link as LinkIcon,
+  Wand2,
+  Loader2,
+  Globe,
+  ChevronLeft
+} from "lucide-react";
 import { CreationWizard } from "@/components/workspace/CreationWizard";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+
+import { WebsiteAuditPDF } from "@/components/pdf/WebsiteAuditPDF";
+import { ProductAuditPDF } from "@/components/pdf/ProductAuditPDF";
+import { exportAuditPDF } from "@/components/pdf/pdfExport";
+
+/* ======================
+ WORKFLOW CONFIG
+====================== */
 
 const workflowTypes = {
   apparel: {
     backendMode: "model_shoot",
     title: "Apparel Photography",
     subtitle: "Professional Product Images",
-    description: "Transform any clothing or accessory photo into studio-quality imagery ready for your store.",
+    description:
+      "Transform any clothing or accessory photo into studio-quality imagery.",
   },
   food: {
     backendMode: "food_photography",
     title: "Food Photography",
     subtitle: "Mouth-Watering Visuals",
-    description: "Turn your dish photos into professional, appetizing images that drive sales.",
+    description:
+      "Turn your dish photos into professional food imagery.",
   },
   audit: {
     backendMode: "audit",
     title: "Site Doctor",
-    subtitle: "Website Health Check",
-    description: "Get a comprehensive audit with actionable improvements for your website.",
+    subtitle: "AI Website & Product Audit",
+    description:
+      "Generate premium audit reports with actionable insights.",
   },
 };
 
+type AuditType = "website" | "product" | null;
+
 export default function Workspace() {
   const [searchParams] = useSearchParams();
-  const type = (searchParams.get("type") as keyof typeof workflowTypes) || "apparel";
+  const type =
+    (searchParams.get("type") as keyof typeof workflowTypes) || "apparel";
+
   const workflow = workflowTypes[type];
   const isAudit = type === "audit";
-
-  // Audit-specific state
-  const [url, setUrl] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [auditResult, setAuditResult] = useState<string | null>(null);
-
-  const pollAuditStatus = (jobId: string) => {
-    const interval = setInterval(async () => {
-      try {
-        const data = await api.getJobStatus(jobId);
-        
-        if (data.status === "processing_magic" || data.status === "processing") {
-          setProgress((prev) => Math.min(prev + 5, 90));
-        }
-
-        if (data.status === "completed") {
-          clearInterval(interval);
-          setIsGenerating(false);
-          setProgress(100);
-          setAuditResult(data.result_url || "Audit complete");
-          toast.success("Audit complete!");
-        } else if (data.status === "failed") {
-          clearInterval(interval);
-          setIsGenerating(false);
-          toast.error("Audit failed. Please try again.");
-        }
-      } catch (e) {
-        console.error("Polling error", e);
-      }
-    }, 3000);
-  };
-
-  const handleAuditGenerate = async () => {
-    if (!url.trim()) return;
-    
-    setIsGenerating(true);
-    setProgress(5);
-    setAuditResult(null);
-
-    try {
-      const data = await api.createAuditJob(url);
-      setProgress(20);
-      pollAuditStatus(data.jobId);
-    } catch (error) {
-      console.error(error);
-      setIsGenerating(false);
-      toast.error("Audit failed. Please try again.");
-    }
-  };
 
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
+
+        {/* HEADER */}
+
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 text-center"
+          className="mb-10 text-center"
         >
-          <p className="text-sm text-primary font-medium mb-1">{workflow.subtitle}</p>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
+          <p className="text-sm text-primary font-medium mb-1">
+            {workflow.subtitle}
+          </p>
+
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">
             {workflow.title}
           </h1>
-          <p className="text-muted-foreground text-sm md:text-base max-w-2xl mx-auto">
+
+          <p className="text-muted-foreground max-w-2xl mx-auto">
             {workflow.description}
           </p>
         </motion.div>
 
-        {/* Content */}
-        {isAudit ? (
-          // Audit workflow - simplified single-step
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-2xl mx-auto"
-          >
-            <div className="glass-card p-8">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <Globe className="w-8 h-8 text-primary" />
-                </div>
-                <h2 className="text-xl font-display font-semibold text-foreground mb-2">
-                  Enter Your Website URL
-                </h2>
-                <p className="text-muted-foreground text-sm">
-                  We'll analyze your site and provide actionable recommendations
-                </p>
-              </div>
+        {isAudit ? <AuditFlow /> : <ImageFlow workflow={workflow} type={type} />}
 
-              <div className="space-y-6">
-                <div className="relative">
-                  <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    type="url"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    placeholder="https://yourwebsite.com"
-                    className="input-glass pl-12 text-base py-4"
-                    disabled={isGenerating}
-                  />
-                </div>
-
-                <AnimatePresence mode="wait">
-                  {isGenerating ? (
-                    <motion.div
-                      key="generating"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="space-y-4"
-                    >
-                      <div className="relative h-3 rounded-full bg-secondary overflow-hidden">
-                        <motion.div
-                          className="absolute inset-y-0 left-0 bg-primary rounded-full"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${progress}%` }}
-                          transition={{ duration: 0.3 }}
-                        />
-                      </div>
-                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Analyzing your website... {Math.round(progress)}%</span>
-                      </div>
-                    </motion.div>
-                  ) : auditResult ? (
-                    <motion.div
-                      key="result"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-center p-6 bg-primary/10 rounded-xl border border-primary/20"
-                    >
-                      <CheckCircle2 className="w-12 h-12 text-primary mx-auto mb-3" />
-                      <p className="text-foreground font-semibold mb-2">Audit Complete!</p>
-                      <p className="text-muted-foreground text-sm mb-4">
-                        Your website analysis is ready
-                      </p>
-                      <a
-                        href={auditResult}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn-primary inline-flex items-center gap-2"
-                      >
-                        <FileText className="w-4 h-4" />
-                        View Report
-                      </a>
-                    </motion.div>
-                  ) : (
-                    <motion.button
-                      key="submit"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      onClick={handleAuditGenerate}
-                      disabled={!url.trim()}
-                      className="btn-primary w-full py-4 text-base flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      <Wand2 className="w-5 h-5" />
-                      Start Website Audit
-                      <ArrowRight className="w-4 h-4 ml-1" />
-                    </motion.button>
-                  )}
-                </AnimatePresence>
-
-                {!isGenerating && !auditResult && (
-                  <p className="text-center text-xs text-muted-foreground">
-                    Uses 10 credits • Results in ~30 seconds
-                  </p>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        ) : (
-          // Image workflow - full wizard
-          <CreationWizard
-            workflowType={type as "apparel" | "food"}
-            backendMode={workflow.backendMode}
-          />
-        )}
       </div>
     </DashboardLayout>
+  );
+}
+
+/* ======================
+ SITE DOCTOR FLOW
+====================== */
+
+function AuditFlow() {
+
+  const [selectedAudit, setSelectedAudit] = useState<AuditType>(null);
+  const [url, setUrl] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  const [auditData, setAuditData] = useState<any>(null);
+  const [showPreview, setShowPreview] = useState(false);
+
+  /* -------- MOCK DATA FOR NOW (FRONTEND ONLY) -------- */
+
+  const mockAuditData = {
+    siteName: "Example Store",
+    score: 78,
+    seo: 72,
+    performance: 81,
+    ux: 75,
+    security: 85,
+    issues: [
+      "Slow page load speed",
+      "Missing meta descriptions",
+      "Low image optimization"
+    ],
+  };
+
+  /* -------- TEMP GENERATE (NO AI) -------- */
+
+  const handleGenerate = () => {
+    if (!url.trim() || !selectedAudit) return;
+
+    setIsGenerating(true);
+    setProgress(20);
+
+    setTimeout(() => {
+      setProgress(100);
+
+      setAuditData(mockAuditData); // 👉 Mock JSON injected
+
+      setIsGenerating(false);
+      setShowPreview(true);
+
+      toast.success("Audit complete (mock preview)");
+    }, 1500);
+  };
+
+  /* ================= PDF PREVIEW ================= */
+
+  if (showPreview) {
+    return (
+      <div className="bg-muted py-8 rounded-xl">
+
+        <div className="max-w-5xl mx-auto px-4">
+
+          <div className="flex items-center justify-between mb-8">
+
+            <button
+              onClick={() => setShowPreview(false)}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Back
+            </button>
+
+            <button
+              onClick={exportAuditPDF}
+              className="btn-primary px-6 py-3"
+            >
+              Download PDF
+            </button>
+
+          </div>
+
+          <div id="audit-report-content">
+
+            {selectedAudit === "website" && (
+              <WebsiteAuditPDF data={auditData} />
+            )}
+
+            {selectedAudit === "product" && (
+              <ProductAuditPDF data={auditData} />
+            )}
+
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
+  /* ================= AUDIT TYPE SELECTION ================= */
+
+  if (!selectedAudit) {
+    return (
+      <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+
+        <button
+          onClick={() => setSelectedAudit("website")}
+          className="glass-card p-8 text-left hover:border-primary transition"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <Globe className="w-6 h-6 text-primary" />
+            <h3 className="text-xl font-semibold">Website Audit</h3>
+          </div>
+          <p className="text-muted-foreground">
+            Performance, SEO, UX, Security analysis
+          </p>
+        </button>
+
+        <button
+          onClick={() => setSelectedAudit("product")}
+          className="glass-card p-8 text-left hover:border-primary transition"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <Globe className="w-6 h-6 text-primary" />
+            <h3 className="text-xl font-semibold">Product Page Audit</h3>
+          </div>
+          <p className="text-muted-foreground">
+            Conversion & trust optimization
+          </p>
+        </button>
+
+      </div>
+    );
+  }
+
+  /* ================= URL INPUT ================= */
+
+  return (
+    <div className="max-w-2xl mx-auto glass-card p-8">
+
+      <div className="relative mb-6">
+        <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://yourwebsite.com"
+          className="input-glass pl-12 py-4"
+        />
+      </div>
+
+      {isGenerating && (
+        <div className="space-y-3 mb-6">
+          <div className="h-3 bg-secondary rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-primary"
+              animate={{ width: `${progress}%` }}
+            />
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Generating audit preview...
+          </div>
+        </div>
+      )}
+
+      {!isGenerating && (
+        <button
+          onClick={handleGenerate}
+          className="btn-primary w-full py-4"
+        >
+          <Wand2 className="w-5 h-5" />
+          Generate Audit Preview
+        </button>
+      )}
+
+    </div>
+  );
+}
+
+/* ======================
+ IMAGE FLOW (UNCHANGED)
+====================== */
+
+function ImageFlow({
+  workflow,
+  type,
+}: {
+  workflow: any;
+  type: "apparel" | "food";
+}) {
+  return (
+    <CreationWizard
+      workflowType={type}
+      backendMode={workflow.backendMode}
+    />
   );
 }

@@ -313,3 +313,23 @@
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }
+
+
+.pdf-page {
+  page-break-after: always;
+}
+
+.break-after-page {
+  break-after: page;
+}
+
+.no-break {
+  page-break-inside: avoid;
+}
+
+.pdf-page {
+  page-break-after: always;
+  break-after: page;
+  width: 210mm;
+  min-height: 297mm;
+}

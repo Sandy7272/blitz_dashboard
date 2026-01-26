@@ -38,14 +38,18 @@ export function GeneratingStep({ progress, status, onCancel }: GeneratingStepPro
       className="flex flex-col items-center justify-center min-h-[400px] space-y-8"
     >
       {/* Animated loader */}
-      <div className="relative">
+      {/* Added p-4 to ensure the large glow shadow doesn't get clipped by parent overflows */}
+      <div className="relative p-4">
         <motion.div
-          className="w-32 h-32 rounded-full border-4 border-primary/20"
+          // Removed 'border-4 border-primary/20' to fix clipping artifacts
+          className="w-32 h-32 rounded-full relative"
           style={{
-            background: `conic-gradient(hsl(var(--primary)) ${progress * 3.6}deg, transparent 0deg)`,
+            // Updated gradient: Paint the progress color, then the track color immediately after
+            background: `conic-gradient(hsl(var(--primary)) ${progress * 3.6}deg, hsl(var(--primary) / 0.2) 0deg)`,
           }}
         >
-          <div className="absolute inset-2 rounded-full bg-background flex items-center justify-center">
+          {/* Adjusted inset to create the ring thickness (inset-2 = 8px thickness, roughly matching border-4 + padding) */}
+          <div className="absolute inset-1.5 rounded-full bg-background flex items-center justify-center">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStage.id}
@@ -70,7 +74,8 @@ export function GeneratingStep({ progress, status, onCancel }: GeneratingStepPro
 
         {/* Glow effect */}
         <motion.div
-          className="absolute inset-0 rounded-full"
+          // Adjusted inset to match the new padding so the glow aligns perfectly
+          className="absolute inset-4 rounded-full"
           animate={{
             boxShadow: [
               "0 0 20px hsl(155 100% 59% / 0.2)",
