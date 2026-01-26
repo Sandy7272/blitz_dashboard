@@ -11,13 +11,18 @@ import {
   Image as ImageIcon,
   Loader2,
   ArrowLeftRight,
-  Info
+  Info,
+  CheckCircle2
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { HintTooltip } from "@/components/onboarding/HintTooltip";
 import { FeatureTooltip } from "@/components/onboarding/FeatureTooltip";
+import { api } from "@/lib/api"; // Ensure this import exists
+import { toast } from "sonner";
+
 const workflowTypes = {
   apparel: {
+    backendMode: "model_shoot",
     title: "Apparel Photography",
     subtitle: "Professional Product Images",
     description: "Upload any clothing or accessory photo. Get back a polished, studio-quality image ready for your store.",
@@ -29,6 +34,7 @@ const workflowTypes = {
     accepts: "image/*",
   },
   food: {
+    backendMode: "food_photography",
     title: "Food Photography",
     subtitle: "Mouth-Watering Visuals",
     description: "Upload a dish photo and watch it transform into an appetizing, professional food image.",
@@ -40,6 +46,7 @@ const workflowTypes = {
     accepts: "image/*",
   },
   audit: {
+    backendMode: "audit",
     title: "Site Doctor",
     subtitle: "Website Health Check",
     description: "Enter your website URL to receive a comprehensive audit with clear, actionable improvements.",
@@ -63,7 +70,11 @@ export default function Workspace() {
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [result, setResult] = useState<string | null>(null);
+  
+  // Updated State for Multiple Results
+  const [results, setResults] = useState<string[]>([]); 
+  const [result, setResult] = useState<string | null>(null); // The currently selected image
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [showComparison, setShowComparison] = useState(false);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -84,22 +95,70 @@ export default function Workspace() {
     }
   };
 
-  const handleGenerate = () => {
-    setIsGenerating(true);
-    setProgress(0);
-    
-    // Simulate generation progress
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
+  const pollStatus = (id: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const data = await api.getJobStatus(id);
+        
+        if (data.status === "processing_magic" || data.status === "processing") {
+           setProgress((prev) => Math.min(prev + 5, 90));
+        }
+
+        if (data.status === "completed") {
           clearInterval(interval);
           setIsGenerating(false);
-          setResult(preview); // In real app, this would be the generated image
-          return 100;
+          setProgress(100);
+          
+          if (data.result_urls && data.result_urls.length > 0) {
+            setResults(data.result_urls);
+            setResult(data.result_urls[0]); // Select first image by default
+          } else if (data.result_url) {
+            setResults([data.result_url]);
+            setResult(data.result_url);
+          }
+          
+          toast.success("Generation complete!");
+        } else if (data.status === "failed") {
+          clearInterval(interval);
+          setIsGenerating(false);
+          toast.error("Server reported a failure.");
         }
-        return prev + Math.random() * 15;
-      });
-    }, 300);
+      } catch (e) {
+        console.error("Polling error", e);
+      }
+    }, 3000);
+  };
+
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    setProgress(5);
+    setResults([]);
+    setResult(null);
+
+    try {
+      let jobId = "";
+      if (type === 'audit') {
+        const data = await api.createAuditJob(url);
+        jobId = data.jobId;
+        setProgress(20);
+      } else if (file) {
+        const jobData = await api.createPhotoJob([file.type]);
+        jobId = jobData.jobId;
+        const uploadUrl = jobData.uploadUrls[0].url;
+        setProgress(15);
+        await api.uploadToS3(uploadUrl, file);
+        setProgress(40);
+        await api.startProcessing(jobId, workflow.backendMode, {});
+      }
+
+      setActiveJobId(jobId);
+      pollStatus(jobId);
+
+    } catch (error) {
+      console.error(error);
+      setIsGenerating(false);
+      toast.error("Generation failed. Please try again.");
+    }
   };
 
   const handleCancel = () => {
@@ -112,6 +171,7 @@ export default function Workspace() {
     setPreview(null);
     setUrl("");
     setResult(null);
+    setResults([]);
     setShowComparison(false);
   };
 
@@ -121,274 +181,139 @@ export default function Workspace() {
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto">
-        {/* Header with improved copy */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <p className="text-sm text-primary font-medium mb-1">{workflow.subtitle}</p>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
-            {workflow.title}
-          </h1>
+          <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">{workflow.title}</h1>
           <p className="text-muted-foreground text-sm md:text-base">{workflow.description}</p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Panel - Controls */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="space-y-6"
-          >
-            {/* Upload Zone / URL Input */}
-            <HintTooltip 
-              id="workspace-upload-hint" 
-              hint="Start here! Upload any product image and our AI will enhance it automatically."
-              position="right"
-              delay={1000}
-            >
+          {/* Left Panel */}
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="space-y-6">
+            <HintTooltip id="workspace-upload-hint" hint="Start here! Upload any product image." position="right" delay={1000}>
               <div className="glass-card p-6">
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-lg font-semibold text-foreground">
-                    {isAudit ? "Enter Website URL" : "Step 1: Upload Your Image"}
-                  </h3>
-                  <FeatureTooltip content="Supported formats: JPG, PNG, WebP. Max file size: 10MB" side="top">
+                  <h3 className="text-lg font-semibold text-foreground">{isAudit ? "Enter Website URL" : "Step 1: Upload Your Image"}</h3>
+                  <FeatureTooltip content="Supported formats: JPG, PNG. Max 10MB" side="top">
                     <Info className="w-4 h-4 text-muted-foreground cursor-help" />
                   </FeatureTooltip>
                 </div>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {isAudit 
-                    ? "Paste the full URL of the website you want to audit" 
-                    : "We'll enhance it automatically using AI"
-                  }
-                </p>
-
-              {isAudit ? (
-                <div className="space-y-2">
-                  <div className="relative">
-                    <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <input
-                      type="url"
-                      value={url}
-                      onChange={(e) => setUrl(e.target.value)}
-                      placeholder="https://yourwebsite.com"
-                      className="input-glass pl-12"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Example: https://mystore.com or https://myblog.com/products
-                  </p>
-                </div>
-              ) : (
-                <div
-                  onDrop={handleDrop}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setIsDragging(true);
-                  }}
-                  onDragLeave={() => setIsDragging(false)}
-                  className={`upload-zone ${isDragging ? "active" : ""}`}
-                >
-                  {preview ? (
-                    <div className="relative w-full">
-                      <img
-                        src={preview}
-                        alt="Your uploaded image"
-                        className="max-h-64 mx-auto rounded-xl object-contain"
-                      />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleReset();
-                        }}
-                        className="absolute top-2 right-2 p-2 rounded-full bg-background/80 hover:bg-background transition-colors"
-                        aria-label="Remove image"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                      <p className="text-xs text-primary mt-3 text-center">
-                        ✓ Image ready. Click Generate below to enhance.
-                      </p>
+                
+                {isAudit ? (
+                  <div className="space-y-2 mt-4">
+                    <div className="relative">
+                      <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://yourwebsite.com" className="input-glass pl-12" />
                     </div>
-                  ) : (
-                    <>
-                      <Upload className="w-12 h-12 text-muted-foreground mb-4" />
-                      <p className="text-foreground font-medium mb-1">
-                        {workflow.uploadHint}
-                      </p>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        or click to browse your files
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {workflow.uploadSubHint}
-                      </p>
-                      <input
-                        type="file"
-                        accept={workflow.accepts || ""}
-                        onChange={handleFileChange}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        aria-label="Upload image file"
-                      />
-                    </>
-                  )}
-                </div>
-              )}
+                  </div>
+                ) : (
+                  <div onDrop={handleDrop} onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} className={`upload-zone mt-4 ${isDragging ? "active" : ""}`}>
+                    {preview ? (
+                      <div className="relative w-full">
+                        <img src={preview} alt="Upload" className="max-h-64 mx-auto rounded-xl object-contain" />
+                        <button onClick={(e) => { e.stopPropagation(); handleReset(); }} className="absolute top-2 right-2 p-2 rounded-full bg-background/80 hover:bg-background transition-colors"><X className="w-4 h-4" /></button>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-12 h-12 text-muted-foreground mb-4" />
+                        <p className="text-foreground font-medium mb-1">{workflow.uploadHint}</p>
+                        <p className="text-xs text-muted-foreground">{workflow.uploadSubHint}</p>
+                        <input type="file" accept={workflow.accepts || ""} onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </HintTooltip>
 
-            {/* Generation Controls */}
+            {/* Generate Button */}
             <div className="glass-card p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">Step 2: Generate</h3>
-                  <p className="text-sm text-muted-foreground">
-                    This will use <span className="text-primary font-medium">{workflow.credits} credits</span>
-                  </p>
-                </div>
-              </div>
-
               <AnimatePresence mode="wait">
                 {isGenerating ? (
-                  <motion.div
-                    key="generating"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="space-y-4"
-                  >
+                  <motion.div key="generating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
                     <div className="relative h-3 rounded-full bg-secondary overflow-hidden">
-                      <motion.div
-                        className="absolute inset-y-0 left-0 bg-primary rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ duration: 0.3 }}
-                      />
+                      <motion.div className="absolute inset-y-0 left-0 bg-primary rounded-full" initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ duration: 0.3 }} />
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        {workflow.processingText} {Math.round(progress)}%
-                      </span>
-                      <button
-                        onClick={handleCancel}
-                        className="btn-ghost text-destructive text-sm"
-                      >
-                        Cancel
-                      </button>
+                      <span className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {workflow.processingText} {Math.round(progress)}%</span>
                     </div>
-                    <p className="text-xs text-muted-foreground text-center">
-                      Usually takes 5-15 seconds. Please don't close this page.
-                    </p>
                   </motion.div>
                 ) : (
-                  <motion.div
-                    key="generate"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="space-y-3"
-                  >
-                    <button
-                      onClick={handleGenerate}
-                      disabled={!canGenerate}
-                      className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none py-4 text-base"
-                    >
-                      <Wand2 className="w-5 h-5" />
-                      {canGenerate ? "Generate Enhanced Image" : "Upload an image first"}
+                  <motion.div key="generate" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <button onClick={handleGenerate} disabled={!canGenerate} className="btn-primary w-full flex items-center justify-center gap-2 py-4 text-base disabled:opacity-50">
+                      <Wand2 className="w-5 h-5" /> {canGenerate ? "Generate Enhanced Image" : "Upload first"}
                     </button>
-                    {!canGenerate && (
-                      <p className="text-xs text-muted-foreground text-center">
-                        {isAudit ? "Enter a URL above to start the audit" : "Upload an image above to enable generation"}
-                      </p>
-                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
           </motion.div>
 
-          {/* Right Panel - Canvas/Result */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="glass-card p-6"
-          >
+          {/* Right Panel - Result Gallery */}
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="glass-card p-6 flex flex-col h-full">
             <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">
-                  {result ? "Your Enhanced Image" : "Step 3: Download Result"}
-                </h3>
-                {result && (
-                  <p className="text-sm text-primary">✓ Ready to download</p>
-                )}
-              </div>
+              <h3 className="text-lg font-semibold text-foreground">{result ? "Your Results" : "Step 3: Download"}</h3>
               {result && (
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setShowComparison(!showComparison)}
-                    className={`btn-ghost text-sm flex items-center gap-1 ${showComparison ? "text-primary" : ""}`}
-                    title="Compare with original"
-                  >
+                <div className="flex gap-2">
+                   <button onClick={() => setShowComparison(!showComparison)} className={`btn-ghost text-sm ${showComparison ? "text-primary" : ""}`} title="Compare Original">
                     <ArrowLeftRight className="w-4 h-4" />
-                    <span className="hidden sm:inline">Compare</span>
                   </button>
-                  <button 
-                    className="btn-primary text-sm flex items-center gap-1 py-2 px-3"
-                    title="Download enhanced image"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span className="hidden sm:inline">Download</span>
-                  </button>
-                  <button 
-                    onClick={handleReset} 
-                    className="btn-ghost text-sm"
-                    title="Start over with a new image"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
+                  <a href={result} download className="btn-primary text-sm flex items-center gap-1 py-2 px-3" target="_blank" rel="noreferrer">
+                    <Download className="w-4 h-4" /> Download
+                  </a>
                 </div>
               )}
             </div>
 
-            <div className="relative aspect-square rounded-xl bg-secondary/50 flex items-center justify-center overflow-hidden">
+            {/* Main Canvas */}
+            <div className="relative flex-grow min-h-[300px] bg-secondary/30 rounded-xl flex items-center justify-center overflow-hidden border border-border/50">
               {result ? (
-                <AnimatePresence>
+                <AnimatePresence mode="wait">
                   <motion.img
-                    key={showComparison ? "original" : "result"}
+                    key={showComparison ? "original" : result}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    src={result}
-                    alt="Your enhanced product image"
+                    exit={{ opacity: 0 }}
+                    src={showComparison ? preview! : result}
+                    alt="Result"
                     className="w-full h-full object-contain"
                   />
+                  {showComparison && (
+                    <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm border border-white/10">
+                      Original
+                    </div>
+                  )}
                 </AnimatePresence>
               ) : (
-                <div className="text-center text-muted-foreground p-6">
+                <div className="text-center text-muted-foreground">
                   <ImageIcon className="w-16 h-16 mx-auto mb-4 opacity-40" />
-                  <p className="font-medium text-foreground mb-1">{workflow.emptyResultText}</p>
-                  <p className="text-sm">Upload an image and click Generate to get started</p>
+                  <p>{workflow.emptyResultText}</p>
                 </div>
               )}
             </div>
 
-            {showComparison && preview && result && (
-              <div className="mt-4 text-center">
-                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary text-sm text-muted-foreground">
-                  <ArrowLeftRight className="w-3 h-3" />
-                  Viewing: Original Image
-                </span>
-              </div>
-            )}
-
-            {result && (
-              <div className="mt-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
-                <p className="text-sm text-foreground">
-                  <span className="font-medium">Happy with the result?</span> Download it now or generate a new version.
-                </p>
+            {/* Thumbnails Strip */}
+            {results.length > 1 && (
+              <div className="mt-6">
+                <p className="text-sm text-muted-foreground mb-3 font-medium">Select Variation:</p>
+                <div className="grid grid-cols-4 gap-3">
+                  {results.map((url, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => { setResult(url); setShowComparison(false); }}
+                      className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                        result === url ? "border-primary shadow-glow-subtle" : "border-transparent hover:border-white/20"
+                      }`}
+                    >
+                      <img src={url} alt={`Var ${idx}`} className="w-full h-full object-cover" />
+                      {result === url && (
+                        <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
+                          <CheckCircle2 className="w-6 h-6 text-primary drop-shadow-md" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </motion.div>
@@ -397,4 +322,3 @@ export default function Workspace() {
     </DashboardLayout>
   );
 }
-
