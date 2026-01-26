@@ -17,11 +17,11 @@ interface CreationWizardProps {
 }
 
 const wizardSteps: WizardStep[] = [
-  { id: 1, title: "Upload", description: "Add your image", icon: Upload },
-  { id: 2, title: "Style", description: "Choose preset", icon: Palette },
-  { id: 3, title: "Options", description: "Customize AI", icon: Settings },
-  { id: 4, title: "Generate", description: "Create magic", icon: Wand2 },
-  { id: 5, title: "Result", description: "Download", icon: ImageIcon },
+  { id: 1, title: "Upload", description: "Image", icon: Upload }, // Shortened desc
+  { id: 2, title: "Style", description: "Preset", icon: Palette }, // Shortened desc
+  { id: 3, title: "Options", description: "Config", icon: Settings }, // Shortened desc
+  { id: 4, title: "Generate", description: "Magic", icon: Wand2 }, // Shortened desc
+  { id: 5, title: "Result", description: "Done", icon: ImageIcon },
 ];
 
 const defaultOptions: GenerationOptions = {
@@ -59,6 +59,7 @@ export function CreationWizard({ workflowType, backendMode }: CreationWizardProp
     setPreview(newPreview);
   }, []);
 
+  // ... (Polling logic remains same)
   const pollStatus = (jobId: string) => {
     const interval = setInterval(async () => {
       try {
@@ -171,13 +172,14 @@ export function CreationWizard({ workflowType, backendMode }: CreationWizardProp
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto w-full h-full flex flex-col">
       {/* Stepper - hide during generation/result */}
+      {/* CHANGED: flex-none prevents it from shrinking, reduced margin and padding */}
       {currentStep < 4 && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 p-6 glass-card"
+          className="mb-4 p-3 glass-card flex-none"
         >
           <WizardStepper
             steps={wizardSteps.slice(0, 3)}
@@ -188,61 +190,64 @@ export function CreationWizard({ workflowType, backendMode }: CreationWizardProp
       )}
 
       {/* Step content */}
-      <AnimatePresence mode="wait">
-        {currentStep === 1 && (
-          <UploadStep
-            key="upload"
-            file={file}
-            preview={preview}
-            onFileChange={handleFileChange}
-            onNext={() => setCurrentStep(2)}
-            accepts="image/*"
-            hint={workflowType === "food" ? "Drop your food photo here" : "Drop your product photo here"}
-          />
-        )}
-
-        {currentStep === 2 && (
-          <TemplateStep
-            key="template"
-            selectedTemplate={selectedTemplate}
-            onSelect={setSelectedTemplate}
-            onNext={() => setCurrentStep(3)}
-            onBack={() => setCurrentStep(1)}
-          />
-        )}
-
-        {currentStep === 3 && (
-          <OptionsStep
-            key="options"
-            options={options}
-            onChange={setOptions}
-            onNext={handleGenerate}
-            onBack={() => setCurrentStep(2)}
-            credits={100}
-          />
-        )}
-
-        {currentStep === 4 && (
-          <div key="generating" className="glass-card p-8">
-            <GeneratingStep
-              progress={progress}
-              status={generationStatus}
-              onCancel={handleCancel}
+      {/* CHANGED: flex-1 to fill space, overflow-y-auto to scroll only content if needed */}
+      <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+        <AnimatePresence mode="wait">
+          {currentStep === 1 && (
+            <UploadStep
+              key="upload"
+              file={file}
+              preview={preview}
+              onFileChange={handleFileChange}
+              onNext={() => setCurrentStep(2)}
+              accepts="image/*"
+              hint={workflowType === "food" ? "Drop your food photo here" : "Drop your product photo here"}
             />
-          </div>
-        )}
+          )}
 
-        {currentStep === 5 && results.length > 0 && (
-          <div key="result" className="glass-card p-8">
-            <ResultStep
-              results={results}
-              originalPreview={preview}
-              onRegenerate={handleRegenerate}
-              onStartNew={handleStartNew}
+          {currentStep === 2 && (
+            <TemplateStep
+              key="template"
+              selectedTemplate={selectedTemplate}
+              onSelect={setSelectedTemplate}
+              onNext={() => setCurrentStep(3)}
+              onBack={() => setCurrentStep(1)}
             />
-          </div>
-        )}
-      </AnimatePresence>
+          )}
+
+          {currentStep === 3 && (
+            <OptionsStep
+              key="options"
+              options={options}
+              onChange={setOptions}
+              onNext={handleGenerate}
+              onBack={() => setCurrentStep(2)}
+              credits={100}
+            />
+          )}
+
+          {currentStep === 4 && (
+            <div key="generating" className="glass-card p-8">
+              <GeneratingStep
+                progress={progress}
+                status={generationStatus}
+                onCancel={handleCancel}
+              />
+            </div>
+          )}
+
+          {currentStep === 5 && results.length > 0 && (
+            <div key="result" className="glass-card p-8">
+              <ResultStep
+                results={results}
+                originalPreview={preview}
+                onRegenerate={handleRegenerate}
+                onStartNew={handleStartNew}
+              />
+            </div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

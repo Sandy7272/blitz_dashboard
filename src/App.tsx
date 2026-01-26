@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -12,6 +13,9 @@ import Billing from "./pages/Billing";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
+// 👉 PDF render preview page (create this file if not yet)
+import PDFRenderPage from "./pages/PDFRenderPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -19,6 +23,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Dashboard />} />
@@ -28,7 +33,11 @@ const App = () => (
           <Route path="/history" element={<History />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/profile" element={<Profile />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+
+          {/* Hidden PDF render route */}
+          <Route path="/pdf-render" element={<PDFRenderPage />} />
+
+          {/* Catch all */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -33,8 +33,14 @@ export default function PDFCoverPage({
         maxHeight: "297mm",
       }}
     >
-      {/* Background gradient section - 55% */}
-      <div className="gradient-cover relative" style={{ height: "55%" }}>
+      {/* Background gradient section - 55% height with inline style for reliable capture */}
+      <div 
+        className="gradient-cover relative" 
+        style={{ 
+          height: "55%", 
+          background: "linear-gradient(to bottom right, #1e40af, #3b82f6)",  // Blue gradient; adjust colors to match your design
+        }}
+      >
         <div
           className="absolute inset-0 opacity-[0.03]"
           style={{
@@ -42,15 +48,18 @@ export default function PDFCoverPage({
           }}
         />
 
-        {/* Logo */}
+        {/* Logo with explicit styles */}
         <div className="absolute top-8 left-10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+          <div 
+            className="w-10 h-10 rounded-lg flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}  // Inline for reliability
+          >
             <span className="text-white font-bold text-lg">A</span>
           </div>
           <span className="text-white/90 font-semibold text-lg">AuditPro</span>
         </div>
 
-        {/* Title */}
+        {/* Title with explicit positioning */}
         <div className="absolute bottom-12 left-10 right-10">
           <p className="text-white/70 text-sm font-medium uppercase tracking-widest mb-3">
             {reportType === "website" ? "Website Audit Report" : "Product Page Audit Report"}
@@ -74,13 +83,13 @@ export default function PDFCoverPage({
                 {reportType === "website" ? "Website Analyzed" : "Product Page"}
               </p>
               <p className="text-lg font-semibold text-foreground truncate">
-                {websiteName}
+                {websiteName || '{{website_name}}'}  // Fallback if not passed
               </p>
             </div>
 
             <div>
               <p className="text-sm text-muted-foreground mb-1">Report Generated</p>
-              <p className="text-base font-medium text-foreground">{date}</p>
+              <p className="text-base font-medium text-foreground">{date || '{{report_date}}'}</p>  // Fallback
             </div>
           </div>
 

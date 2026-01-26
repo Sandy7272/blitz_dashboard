@@ -21,31 +21,31 @@ export default function PDFPage({
   return (
     <div
       className={cn(
-        "pdf-page bg-white mx-auto relative box-border print:shadow-none",
+        "pdf-page bg-white mx-auto relative box-border print:shadow-none overflow-hidden",
         className
       )}
       style={{
+        // A4 Exact Dimensions
         width: "210mm",
+        height: "297mm", 
         minHeight: "297mm",
+        maxHeight: "297mm",
         maxWidth: "210mm",
-
-        /* 🔥 CRITICAL for multi-page PDF */
+        
+        // CSS Break Properties to prevent drift
         pageBreakAfter: "always",
         breakAfter: "page",
+        pageBreakInside: "avoid",
       }}
     >
-      {/* Content */}
+      {/* Main Content Area */}
       <div
         className={cn(
-          "flex flex-col",
-          compact ? "px-10 pt-8 pb-6" : "px-10 pt-10 pb-6",
-          showFooter ? "min-h-[calc(297mm-12mm)]" : "min-h-[297mm]"
+          "flex flex-col h-full",
+          compact ? "px-10 pt-8 pb-6" : "px-10 pt-10 pb-6"
         )}
-        style={{
-          paddingBottom: showFooter ? "12mm" : undefined,
-        }}
       >
-        <div className="flex-1">
+        <div className="flex-1 flex flex-col">
           {children}
         </div>
       </div>
@@ -54,7 +54,6 @@ export default function PDFPage({
       {showFooter && pageNumber && (
         <div
           className="absolute bottom-0 left-0 right-0 h-[12mm] px-10 flex items-center justify-between border-t border-border/30 text-xs text-muted-foreground bg-white"
-          style={{ height: "12mm" }}
         >
           <span className="font-medium">Confidential Audit Report</span>
           <span>

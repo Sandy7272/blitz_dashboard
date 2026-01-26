@@ -129,7 +129,7 @@ export default function AuditFlow() {
         >
           <div className="flex justify-end mb-4">
             <button
-              onClick={() => ExportAuditPDF()}
+              onClick={exportAuditPDF}
               className="btn-primary flex items-center gap-2"
             >
               <FileText className="w-4 h-4" />

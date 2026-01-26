@@ -1,6 +1,3 @@
-interface WebsiteAuditPDFProps {
-  data: any;
-}
 import PDFCoverPage from "./PDFCoverPage";
 import PDFPage from "./PDFPage";
 import { ScoreCircle } from "../ui/ScoreCircle";
@@ -24,7 +21,6 @@ import {
   Target,
   ArrowRight,
 } from "lucide-react";
-
 
 // Placeholder data - all values are dynamic
 const data = {

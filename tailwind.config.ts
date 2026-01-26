@@ -1,4 +1,6 @@
+
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
@@ -79,6 +81,9 @@ export default {
           900: "#07603d",
           950: "#003721",
         },
+        // Added for score colors to match images
+        "score-excellent": "#22c55e", // Green for optimal/good
+        warning: "#eab308", // Yellow for needs work
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -142,5 +147,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 } satisfies Config;
