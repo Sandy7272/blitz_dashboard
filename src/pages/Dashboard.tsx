@@ -5,6 +5,8 @@ import { HowItWorks } from "@/components/dashboard/HowItWorks";
 import { Shirt, UtensilsCrossed, Search, ImageIcon, Zap, Clock, TrendingUp, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 
 const workflows = [
   {
@@ -41,6 +43,39 @@ const stats = [
 ];
 
 export default function Dashboard() {
+  const [statsData, setStatsData] = useState({
+    audits: 0,
+    threeD: 0,
+    systemStatus: "Offline"
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await api.getDashboardStats();
+        setStatsData({
+            audits: data.audits_completed || 0,
+            threeD: data.three_d_requests || 0,
+            systemStatus: data.system_health?.status || "Online"
+        });
+      } catch (e) {
+        console.error("Failed to fetch stats", e);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  // Update the 'stats' array constant to use 'statsData'
+  const stats = [
+    { 
+      title: "Images Created", 
+      value: statsData.threeD.toString(), // Mapping '3D requests' to images for now
+      change: "+12%", 
+      changeType: "positive" as const, 
+      icon: ImageIcon 
+    },
+    // ... other stats
+  ];
   return (
     <DashboardLayout>
       {/* Header with improved copy */}
