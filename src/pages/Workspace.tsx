@@ -8,6 +8,8 @@ import {
   Loader2,
   Globe,
   ChevronLeft,
+  ShoppingBag,
+  Download,
 } from "lucide-react";
 import { CreationWizard } from "@/components/workspace/CreationWizard";
 import { toast } from "sonner";
@@ -15,6 +17,10 @@ import { toast } from "sonner";
 import { WebsiteAuditPDF } from "@/components/pdf/WebsiteAuditPDF";
 import { ProductAuditPDF } from "@/components/pdf/ProductAuditPDF";
 import { exportAuditPDF } from "@/components/pdf/pdfExport";
+import { websiteAuditMockData } from "@/mock/websiteAuditMock";
+import { productAuditMockData } from "@/mock/productAuditMock";
+import { WebsiteAuditData, ProductAuditData } from "@/types/audit";
+import { Progress } from "@/components/ui/progress";
 
 /* ======================
  WORKFLOW CONFIG
@@ -56,14 +62,8 @@ export default function Workspace() {
 
   return (
     <DashboardLayout>
-      {/* LAYOUT FIX: 
-        1. h-full: Takes full height of the dashboard main area
-        2. flex-col: Stacks header and content vertically
-        3. overflow-hidden: Prevents window-level scrolling 
-      */}
       <div className="w-full h-full flex flex-col px-4 py-4 md:px-6 md:py-6 overflow-hidden">
-
-        {/* ===== HEADER (Fixed Height) ===== */}
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -72,29 +72,21 @@ export default function Workspace() {
           <p className="text-xs md:text-sm text-primary font-medium mb-1">
             {workflow.subtitle}
           </p>
-
           <h1 className="text-2xl md:text-3xl font-bold mb-2">
             {workflow.title}
           </h1>
-
           <p className="text-muted-foreground text-sm md:text-base hidden md:block">
             {workflow.description}
           </p>
         </motion.div>
 
-        {/* ===== MAIN CONTENT WRAPPER (Flexible Height) ===== */}
-        {/* flex-1: Fills strictly the remaining space
-           min-h-0: Crucial for nested scrolling to work
-        */}
+        {/* Main Content */}
         <div className="flex-1 min-h-0 w-full max-w-6xl mx-auto flex flex-col">
-
           {isAudit ? (
             <div className="h-full overflow-y-auto">
               <AuditFlow />
             </div>
           ) : (
-            // WIZARD CONTAINER
-            // Added flex-col and h-full to the card to contain the wizard components
             <div className="bg-black/30 backdrop-blur-xl rounded-2xl p-4 md:p-6 border border-white/10 shadow-xl flex-1 flex flex-col min-h-0 overflow-hidden">
               <CreationWizard
                 workflowType={type}
@@ -102,7 +94,6 @@ export default function Workspace() {
               />
             </div>
           )}
-
         </div>
       </div>
     </DashboardLayout>
@@ -118,69 +109,112 @@ function AuditFlow() {
   const [url, setUrl] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [auditData, setAuditData] = useState<any>(null);
+  const [auditData, setAuditData] = useState<WebsiteAuditData | ProductAuditData | null>(null);
   const [showPreview, setShowPreview] = useState(false);
 
-  const mockAuditData = {
-    siteName: "Example Store",
-    score: 78,
+  const extractDomain = (urlString: string): string => {
+    try {
+      const parsed = new URL(urlString.startsWith("http") ? urlString : `https://${urlString}`);
+      return parsed.hostname;
+    } catch {
+      return urlString;
+    }
   };
 
   const handleGenerate = () => {
     if (!url.trim() || !selectedAudit) return;
 
     setIsGenerating(true);
-    setProgress(30);
+    setProgress(0);
+
+    // Simulate progress
+    const interval = setInterval(() => {
+      setProgress(p => {
+        if (p >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        return p + 10;
+      });
+    }, 200);
 
     setTimeout(() => {
+      clearInterval(interval);
       setProgress(100);
-      setAuditData(mockAuditData);
+      
+      // Use mock data with extracted domain
+      const domain = extractDomain(url);
+      if (selectedAudit === "website") {
+        setAuditData({ ...websiteAuditMockData, websiteName: domain });
+      } else {
+        setAuditData({ ...productAuditMockData, websiteName: domain });
+      }
+      
       setIsGenerating(false);
       setShowPreview(true);
-      toast.success("Audit generated (preview)");
-    }, 1500);
+      toast.success("Audit report generated!");
+    }, 2500);
+  };
+
+  const handleDownload = async () => {
+    toast.info("Generating PDF...");
+    try {
+      await exportAuditPDF();
+      toast.success("PDF downloaded!");
+    } catch (error) {
+      toast.error("Failed to generate PDF");
+    }
   };
 
   /* ===== PDF PREVIEW ===== */
-
-  if (showPreview) {
+  if (showPreview && auditData) {
     return (
       <div className="bg-black/40 backdrop-blur-xl rounded-2xl p-4 md:p-8 border border-white/10 h-full flex flex-col">
-
         <div className="flex justify-between mb-4 flex-none">
           <button
-            onClick={() => setShowPreview(false)}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              setShowPreview(false);
+              setAuditData(null);
+            }}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
             Back
           </button>
 
-          <button onClick={exportAuditPDF} className="btn-primary px-6 py-2">
+          <button 
+            onClick={handleDownload} 
+            className="btn-primary px-6 py-2 flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
             Download PDF
           </button>
         </div>
 
         <div id="audit-report-content" className="bg-muted rounded-xl p-6 flex-1 overflow-y-auto">
-          {selectedAudit === "website" && <WebsiteAuditPDF />}
-          {selectedAudit === "product" && <ProductAuditPDF />}
+          {selectedAudit === "website" && (
+            <WebsiteAuditPDF data={auditData as WebsiteAuditData} />
+          )}
+          {selectedAudit === "product" && (
+            <ProductAuditPDF data={auditData as ProductAuditData} />
+          )}
         </div>
       </div>
     );
   }
 
   /* ===== AUDIT TYPE SELECTION ===== */
-
   if (!selectedAudit) {
     return (
       <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto h-full items-center">
         <AuditCard
+          icon={Globe}
           title="Website Audit"
           desc="Performance, SEO, UX, Security analysis"
           onClick={() => setSelectedAudit("website")}
         />
-
         <AuditCard
+          icon={ShoppingBag}
           title="Product Page Audit"
           desc="Conversion & trust optimization"
           onClick={() => setSelectedAudit("product")}
@@ -190,9 +224,23 @@ function AuditFlow() {
   }
 
   /* ===== URL INPUT ===== */
-
   return (
     <div className="max-w-3xl mx-auto bg-black/40 backdrop-blur-xl rounded-2xl p-10 border border-white/10 shadow-xl mt-10">
+      <div className="text-center mb-8">
+        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+          {selectedAudit === "website" ? (
+            <Globe className="w-8 h-8 text-primary" />
+          ) : (
+            <ShoppingBag className="w-8 h-8 text-primary" />
+          )}
+        </div>
+        <h2 className="text-xl font-bold mb-2">
+          {selectedAudit === "website" ? "Website Audit" : "Product Page Audit"}
+        </h2>
+        <p className="text-muted-foreground">
+          Enter the URL to analyze
+        </p>
+      </div>
 
       <div className="relative mb-6">
         <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -200,33 +248,43 @@ function AuditFlow() {
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://yourwebsite.com"
+          placeholder={selectedAudit === "website" ? "https://yourwebsite.com" : "https://store.com/product/..."}
           className="input-glass pl-12 py-4 text-lg"
+          onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
         />
       </div>
 
-      {isGenerating && (
-        <div className="space-y-3 mb-6">
-          <div className="h-2 bg-secondary rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-primary"
-              animate={{ width: `${progress}%` }}
-            />
+      {isGenerating ? (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between text-sm mb-2">
+            <span className="text-muted-foreground">Analyzing...</span>
+            <span className="text-foreground font-medium">{Math.round(progress)}%</span>
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Progress value={progress} className="h-2" />
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="w-4 h-4 animate-spin" />
-            Generating audit...
+            Generating premium audit report...
           </div>
         </div>
+      ) : (
+        <>
+          <button 
+            onClick={handleGenerate} 
+            disabled={!url.trim()}
+            className="btn-primary w-full py-4 text-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Wand2 className="w-5 h-5" />
+            Generate Premium Audit
+          </button>
+          
+          <button
+            onClick={() => setSelectedAudit(null)}
+            className="w-full mt-4 text-muted-foreground hover:text-foreground text-sm transition-colors"
+          >
+            ← Change audit type
+          </button>
+        </>
       )}
-
-      {!isGenerating && (
-        <button onClick={handleGenerate} className="btn-primary w-full py-4 text-lg">
-          <Wand2 className="w-5 h-5" />
-          Generate Premium Audit
-        </button>
-      )}
-
     </div>
   );
 }
@@ -235,11 +293,15 @@ function AuditFlow() {
  AUDIT CARD COMPONENT
 ====================== */
 
+import { LucideIcon } from "lucide-react";
+
 function AuditCard({
+  icon: Icon,
   title,
   desc,
   onClick,
 }: {
+  icon: LucideIcon;
   title: string;
   desc: string;
   onClick: () => void;
@@ -247,12 +309,12 @@ function AuditCard({
   return (
     <button
       onClick={onClick}
-      className="bg-black/40 backdrop-blur-xl rounded-2xl p-10 border border-white/10 text-left hover:border-primary transition shadow-xl h-64 flex flex-col justify-center"
+      className="group bg-black/40 backdrop-blur-xl rounded-2xl p-10 border border-white/10 text-left hover:border-primary/50 transition-all shadow-xl h-64 flex flex-col justify-center hover:shadow-2xl hover:-translate-y-1"
     >
-      <div className="flex items-center gap-3 mb-4">
-        <Globe className="w-6 h-6 text-primary" />
-        <h3 className="text-2xl font-semibold">{title}</h3>
+      <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+        <Icon className="w-7 h-7 text-primary" />
       </div>
+      <h3 className="text-2xl font-semibold mb-2">{title}</h3>
       <p className="text-muted-foreground text-lg">{desc}</p>
     </button>
   );

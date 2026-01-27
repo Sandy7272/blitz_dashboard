@@ -6,7 +6,7 @@ import { ScoreBar } from "../ui/ScoreBar";
 import { IssueItem } from "../ui/IssueItem";
 import { RecommendationBox } from "../ui/RecommendationBox";
 import { RoadmapPhase } from "../ui/RoadmapPhase";
-import { StatusIndicator } from "../ui/StatusIndicator";
+import { WebsiteAuditData } from "@/types/audit";
 import {
   Gauge,
   Search,
@@ -22,34 +22,32 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-// Placeholder data - all values are dynamic
-const data = {
-  websiteName: "{{website_name}}",
-  date: "{{report_date}}",
-  overallScore: 72,
-  performanceScore: 68,
-  seoScore: 75,
-  uxScore: 80,
-  conversionScore: 65,
-  securityScore: 85,
-  aiSummary:
-    "{{ai_summary}} - Your website shows strong fundamentals but has key optimization opportunities. Performance bottlenecks and SEO gaps are limiting organic reach. Quick wins in Core Web Vitals could yield 20%+ traffic improvement.",
-  strengths: [
-    "Mobile-responsive design implemented correctly",
-    "SSL certificate properly configured",
-    "Clear navigation structure",
-    "Fast server response times",
-  ],
-  weaknesses: [
-    "Large unoptimized images slowing load times",
-    "Missing meta descriptions on 12 pages",
-    "No structured data markup",
-    "Weak internal linking strategy",
-  ],
-};
+interface WebsiteAuditPDFProps {
+  data: WebsiteAuditData;
+}
 
-export const WebsiteAuditPDF = () => {
+export const WebsiteAuditPDF = ({ data }: WebsiteAuditPDFProps) => {
   const totalPages = 10;
+
+  const getStatusBadge = (status: string) => {
+    const styles = {
+      excellent: "bg-score-excellent/10 text-score-excellent",
+      good: "bg-score-good/10 text-score-good",
+      warning: "bg-warning/10 text-warning",
+      critical: "bg-destructive/10 text-destructive",
+    };
+    const labels = {
+      excellent: "Optimal",
+      good: "Good",
+      warning: "Needs Work",
+      critical: "Critical",
+    };
+    return (
+      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${styles[status as keyof typeof styles] || styles.warning}`}>
+        {labels[status as keyof typeof labels] || status}
+      </span>
+    );
+  };
 
   return (
     <div className="space-y-6 print:space-y-0">
@@ -116,18 +114,12 @@ export const WebsiteAuditPDF = () => {
         <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
           <h3 className="font-semibold text-sm text-foreground mb-3">🔥 Top Priority Fixes</h3>
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white rounded-lg p-3 shadow-sm border border-border/50">
-              <p className="text-xs font-medium text-foreground">Optimize Images</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Est. +15% speed boost</p>
-            </div>
-            <div className="bg-white rounded-lg p-3 shadow-sm border border-border/50">
-              <p className="text-xs font-medium text-foreground">Add Meta Tags</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Est. +10% CTR</p>
-            </div>
-            <div className="bg-white rounded-lg p-3 shadow-sm border border-border/50">
-              <p className="text-xs font-medium text-foreground">Fix CLS Issues</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Est. +5% engagement</p>
-            </div>
+            {data.priorityFixes.map((fix, i) => (
+              <div key={i} className="bg-white rounded-lg p-3 shadow-sm border border-border/50">
+                <p className="text-xs font-medium text-foreground">{fix.title}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{fix.impact}</p>
+              </div>
+            ))}
           </div>
         </div>
       </PDFPage>
@@ -173,49 +165,55 @@ export const WebsiteAuditPDF = () => {
         </div>
 
         {/* Metrics Grid */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="grid grid-cols-4 gap-3 mb-5">
           <div className="bg-card rounded-lg p-4 shadow-card border border-border/50 text-center">
             <p className="text-xs text-muted-foreground mb-1">LCP</p>
-            <p className="text-2xl font-bold text-warning">2.8s</p>
+            <p className={`text-2xl font-bold ${data.performance.lcp.status === 'excellent' ? 'text-score-excellent' : data.performance.lcp.status === 'good' ? 'text-score-good' : data.performance.lcp.status === 'warning' ? 'text-warning' : 'text-destructive'}`}>
+              {data.performance.lcp.value}
+            </p>
             <p className="text-[10px] text-muted-foreground mt-0.5">Largest Contentful Paint</p>
           </div>
           <div className="bg-card rounded-lg p-4 shadow-card border border-border/50 text-center">
             <p className="text-xs text-muted-foreground mb-1">FID</p>
-            <p className="text-2xl font-bold text-score-excellent">45ms</p>
+            <p className={`text-2xl font-bold ${data.performance.fid.status === 'excellent' ? 'text-score-excellent' : data.performance.fid.status === 'good' ? 'text-score-good' : data.performance.fid.status === 'warning' ? 'text-warning' : 'text-destructive'}`}>
+              {data.performance.fid.value}
+            </p>
             <p className="text-[10px] text-muted-foreground mt-0.5">First Input Delay</p>
           </div>
           <div className="bg-card rounded-lg p-4 shadow-card border border-border/50 text-center">
             <p className="text-xs text-muted-foreground mb-1">CLS</p>
-            <p className="text-2xl font-bold text-destructive">0.25</p>
+            <p className={`text-2xl font-bold ${data.performance.cls.status === 'excellent' ? 'text-score-excellent' : data.performance.cls.status === 'good' ? 'text-score-good' : data.performance.cls.status === 'warning' ? 'text-warning' : 'text-destructive'}`}>
+              {data.performance.cls.value}
+            </p>
             <p className="text-[10px] text-muted-foreground mt-0.5">Cumulative Layout Shift</p>
+          </div>
+          <div className="bg-card rounded-lg p-4 shadow-card border border-border/50 text-center">
+            <p className="text-xs text-muted-foreground mb-1">TTFB</p>
+            <p className={`text-2xl font-bold ${data.performance.ttfb.status === 'excellent' ? 'text-score-excellent' : data.performance.ttfb.status === 'good' ? 'text-score-good' : data.performance.ttfb.status === 'warning' ? 'text-warning' : 'text-destructive'}`}>
+              {data.performance.ttfb.value}
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Time to First Byte</p>
           </div>
         </div>
 
         {/* Issues */}
         <h3 className="font-semibold text-sm text-foreground mb-3">Detected Issues</h3>
         <div className="space-y-2 mb-5">
-          <IssueItem
-            severity="critical"
-            title="Large images not optimized"
-            description="5 images exceed 500KB, significantly impacting load time."
-          />
-          <IssueItem
-            severity="warning"
-            title="Render-blocking JavaScript"
-            description="3 scripts blocking initial render. Consider async loading."
-          />
-          <IssueItem
-            severity="info"
-            title="Browser caching not configured"
-            description="Static assets could benefit from longer cache durations."
-          />
+          {data.performance.issues.map((issue, i) => (
+            <IssueItem
+              key={i}
+              severity={issue.severity}
+              title={issue.title}
+              description={issue.description}
+            />
+          ))}
         </div>
 
         {/* AI Recommendation */}
         <RecommendationBox
           type="ai"
           title="AI Recommendation"
-          description="Implement WebP image format with lazy loading to reduce payload by ~60%. Combined with code splitting, expect LCP improvement to under 2s."
+          description={data.performance.recommendation}
         />
       </PDFPage>
 
@@ -242,51 +240,26 @@ export const WebsiteAuditPDF = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
-              <tr>
-                <td className="py-2 px-3 text-xs text-foreground">Title Tags</td>
-                <td className="py-2 px-3"><span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-score-excellent/10 text-score-excellent">Optimal</span></td>
-                <td className="py-2 px-3 text-xs text-muted-foreground">All pages have unique titles</td>
-              </tr>
-              <tr>
-                <td className="py-2 px-3 text-xs text-foreground">Meta Descriptions</td>
-                <td className="py-2 px-3"><span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-warning/10 text-warning">Needs Work</span></td>
-                <td className="py-2 px-3 text-xs text-muted-foreground">12 pages missing descriptions</td>
-              </tr>
-              <tr>
-                <td className="py-2 px-3 text-xs text-foreground">H1 Tags</td>
-                <td className="py-2 px-3"><span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-score-excellent/10 text-score-excellent">Optimal</span></td>
-                <td className="py-2 px-3 text-xs text-muted-foreground">Properly structured</td>
-              </tr>
-              <tr>
-                <td className="py-2 px-3 text-xs text-foreground">Structured Data</td>
-                <td className="py-2 px-3"><span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">Missing</span></td>
-                <td className="py-2 px-3 text-xs text-muted-foreground">No schema markup detected</td>
-              </tr>
-              <tr>
-                <td className="py-2 px-3 text-xs text-foreground">XML Sitemap</td>
-                <td className="py-2 px-3"><span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-score-excellent/10 text-score-excellent">Optimal</span></td>
-                <td className="py-2 px-3 text-xs text-muted-foreground">Valid and submitted</td>
-              </tr>
-              <tr>
-                <td className="py-2 px-3 text-xs text-foreground">Canonical URLs</td>
-                <td className="py-2 px-3"><span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-warning/10 text-warning">Needs Work</span></td>
-                <td className="py-2 px-3 text-xs text-muted-foreground">5 pages have issues</td>
-              </tr>
+              {data.seo.checklist.map((item, i) => (
+                <tr key={i}>
+                  <td className="py-2 px-3 text-xs text-foreground">{item.element}</td>
+                  <td className="py-2 px-3">{getStatusBadge(item.status)}</td>
+                  <td className="py-2 px-3 text-xs text-muted-foreground">{item.details}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <RecommendationBox
-            type="tip"
-            title="Add Schema Markup"
-            description="Implement Organization, WebPage, and BreadcrumbList schemas to improve rich snippet eligibility."
-          />
-          <RecommendationBox
-            type="tip"
-            title="Fix Meta Descriptions"
-            description="Write unique, compelling descriptions (150-160 chars) for all pages to improve CTR."
-          />
+          {data.seo.recommendations.slice(0, 2).map((rec, i) => (
+            <RecommendationBox
+              key={i}
+              type="tip"
+              title={i === 0 ? "Add Schema Markup" : "Fix Meta Descriptions"}
+              description={rec}
+            />
+          ))}
         </div>
       </PDFPage>
 
@@ -310,21 +283,15 @@ export const WebsiteAuditPDF = () => {
               <h3 className="font-semibold text-sm text-foreground">Mobile</h3>
             </div>
             <div className="flex justify-center mb-3">
-              <ScoreCircle score={75} size="md" />
+              <ScoreCircle score={data.ux.mobileScore} size="md" />
             </div>
             <ul className="space-y-1.5 text-xs text-muted-foreground">
-              <li className="flex items-center gap-2">
-                <div className="w-1 h-1 rounded-full bg-score-excellent flex-shrink-0" />
-                Responsive design works well
-              </li>
-              <li className="flex items-center gap-2">
-                <div className="w-1 h-1 rounded-full bg-warning flex-shrink-0" />
-                Touch targets slightly small
-              </li>
-              <li className="flex items-center gap-2">
-                <div className="w-1 h-1 rounded-full bg-score-excellent flex-shrink-0" />
-                Text readable without zoom
-              </li>
+              {data.ux.mobileInsights.map((insight, i) => (
+                <li key={i} className="flex items-center gap-2">
+                  <div className={`w-1 h-1 rounded-full ${i < 2 ? 'bg-score-excellent' : 'bg-warning'} flex-shrink-0`} />
+                  {insight}
+                </li>
+              ))}
             </ul>
           </div>
           <div className="bg-card rounded-lg p-4 shadow-card border border-border/50">
@@ -333,21 +300,15 @@ export const WebsiteAuditPDF = () => {
               <h3 className="font-semibold text-sm text-foreground">Desktop</h3>
             </div>
             <div className="flex justify-center mb-3">
-              <ScoreCircle score={82} size="md" />
+              <ScoreCircle score={data.ux.desktopScore} size="md" />
             </div>
             <ul className="space-y-1.5 text-xs text-muted-foreground">
-              <li className="flex items-center gap-2">
-                <div className="w-1 h-1 rounded-full bg-score-excellent flex-shrink-0" />
-                Clean navigation structure
-              </li>
-              <li className="flex items-center gap-2">
-                <div className="w-1 h-1 rounded-full bg-score-excellent flex-shrink-0" />
-                Good visual hierarchy
-              </li>
-              <li className="flex items-center gap-2">
-                <div className="w-1 h-1 rounded-full bg-warning flex-shrink-0" />
-                Some content hard to scan
-              </li>
+              {data.ux.desktopInsights.map((insight, i) => (
+                <li key={i} className="flex items-center gap-2">
+                  <div className={`w-1 h-1 rounded-full ${i < 2 ? 'bg-score-excellent' : 'bg-warning'} flex-shrink-0`} />
+                  {insight}
+                </li>
+              ))}
             </ul>
           </div>
         </div>
@@ -355,9 +316,9 @@ export const WebsiteAuditPDF = () => {
         {/* UX Issues */}
         <h3 className="font-semibold text-sm text-foreground mb-3">UX Improvement Opportunities</h3>
         <div className="space-y-2">
-          <IssueItem severity="warning" title="Mobile touch targets under 44px" description="CTA buttons on product pages are 36px height. Recommend 44px minimum." />
-          <IssueItem severity="info" title="Consider sticky navigation" description="Long-form pages would benefit from persistent navigation access." />
-          <IssueItem severity="info" title="Add progress indicators" description="Multi-step forms lack visual progress feedback." />
+          {data.ux.issues.map((issue, i) => (
+            <IssueItem key={i} severity={issue.severity} title={issue.title} description={issue.description} />
+          ))}
         </div>
       </PDFPage>
 
@@ -375,183 +336,189 @@ export const WebsiteAuditPDF = () => {
 
         <div className="grid grid-cols-4 gap-3 mb-5">
           <div className="bg-card rounded-lg p-3 shadow-card border border-border/50 text-center">
-            <p className="text-2xl font-bold text-foreground mb-0.5">3</p>
+            <p className="text-xl font-bold text-foreground mb-0.5">{data.conversion.ctaCount}</p>
             <p className="text-[10px] text-muted-foreground">CTAs Found</p>
           </div>
           <div className="bg-card rounded-lg p-3 shadow-card border border-border/50 text-center">
-            <p className="text-2xl font-bold text-warning mb-0.5">Low</p>
-            <p className="text-[10px] text-muted-foreground">CTA Visibility</p>
+            <p className={`text-xl font-bold ${data.conversion.aboveFoldCta ? 'text-score-excellent' : 'text-warning'} mb-0.5`}>
+              {data.conversion.aboveFoldCta ? 'Yes' : 'No'}
+            </p>
+            <p className="text-[10px] text-muted-foreground">Above Fold CTA</p>
           </div>
           <div className="bg-card rounded-lg p-3 shadow-card border border-border/50 text-center">
-            <p className="text-2xl font-bold text-score-excellent mb-0.5">4</p>
+            <p className="text-xl font-bold text-foreground mb-0.5">{data.conversion.formOptimization}%</p>
+            <p className="text-[10px] text-muted-foreground">Form Optimization</p>
+          </div>
+          <div className="bg-card rounded-lg p-3 shadow-card border border-border/50 text-center">
+            <p className="text-xl font-bold text-foreground mb-0.5">{data.conversion.trustSignals}</p>
             <p className="text-[10px] text-muted-foreground">Trust Signals</p>
-          </div>
-          <div className="bg-card rounded-lg p-3 shadow-card border border-border/50 text-center">
-            <p className="text-2xl font-bold text-warning mb-0.5">5</p>
-            <p className="text-[10px] text-muted-foreground">Form Fields</p>
           </div>
         </div>
 
-        {/* CTA Review */}
-        <h3 className="font-semibold text-sm text-foreground mb-3">CTA Analysis</h3>
-        <div className="bg-secondary/30 rounded-lg p-4 mb-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-border/50">
-              <div>
-                <p className="font-medium text-xs text-foreground">Primary CTA: "Get Started"</p>
-                <p className="text-[10px] text-muted-foreground">Homepage hero section</p>
+        {/* Funnel Analysis */}
+        <h3 className="font-semibold text-sm text-foreground mb-3">Conversion Funnel Analysis</h3>
+        <div className="bg-card rounded-lg p-4 shadow-card border border-border/50 mb-5">
+          <div className="flex items-center justify-between gap-2">
+            {data.conversion.funnelSteps.map((step, i) => (
+              <div key={i} className="flex-1 text-center">
+                <div className={`h-16 rounded-lg mb-2 flex items-center justify-center ${
+                  step.status === 'excellent' ? 'bg-score-excellent/20' :
+                  step.status === 'good' ? 'bg-score-good/20' :
+                  step.status === 'warning' ? 'bg-warning/20' : 'bg-destructive/20'
+                }`}>
+                  <span className="text-lg font-bold text-foreground">{100 - step.dropoff}%</span>
+                </div>
+                <p className="text-xs font-medium text-foreground">{step.name}</p>
+                {step.dropoff > 0 && (
+                  <p className="text-[10px] text-destructive">-{step.dropoff}%</p>
+                )}
               </div>
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-score-excellent/10 text-score-excellent">Good</span>
-            </div>
-            <div className="flex items-center justify-between pb-2 border-b border-border/50">
-              <div>
-                <p className="font-medium text-xs text-foreground">Secondary CTA: "Learn More"</p>
-                <p className="text-[10px] text-muted-foreground">Below fold, low contrast</p>
-              </div>
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-warning/10 text-warning">Improve</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-xs text-foreground">Form CTA: "Submit"</p>
-                <p className="text-[10px] text-muted-foreground">Generic, lacks urgency</p>
-              </div>
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">Weak</span>
-            </div>
+            ))}
           </div>
+        </div>
+
+        {/* Issues */}
+        <div className="space-y-2">
+          {data.conversion.issues.map((issue, i) => (
+            <IssueItem key={i} severity={issue.severity} title={issue.title} description={issue.description} />
+          ))}
+        </div>
+      </PDFPage>
+
+      {/* Page 8: Security */}
+      <PDFPage pageNumber={8} totalPages={totalPages}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2.5 rounded-lg bg-primary/10">
+            <Shield className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-foreground">Security Review</h2>
+            <p className="text-xs text-muted-foreground">SSL, headers, and trust analysis</p>
+          </div>
+        </div>
+
+        {/* SSL Status */}
+        <div className={`rounded-lg p-4 mb-5 flex items-center gap-3 ${data.security.sslValid ? 'bg-score-excellent/10 border border-score-excellent/20' : 'bg-destructive/10 border border-destructive/20'}`}>
+          <Lock className={`w-6 h-6 ${data.security.sslValid ? 'text-score-excellent' : 'text-destructive'}`} />
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              {data.security.sslValid ? 'SSL Certificate Valid' : 'SSL Certificate Issue'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {data.security.sslValid ? 'Your site is served over HTTPS with a valid certificate' : 'Certificate expired or misconfigured'}
+            </p>
+          </div>
+        </div>
+
+        {/* Security Headers */}
+        <h3 className="font-semibold text-sm text-foreground mb-3">Security Headers</h3>
+        <div className="bg-card rounded-lg shadow-card border border-border/50 mb-5 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary/50">
+              <tr>
+                <th className="text-left py-2 px-3 text-xs font-semibold text-foreground">Header</th>
+                <th className="text-left py-2 px-3 text-xs font-semibold text-foreground">Status</th>
+                <th className="text-left py-2 px-3 text-xs font-semibold text-foreground">Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/50">
+              {data.security.headers.map((header, i) => (
+                <tr key={i}>
+                  <td className="py-2 px-3 text-xs text-foreground">{header.name}</td>
+                  <td className="py-2 px-3">
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                      header.status === 'present' ? 'bg-score-excellent/10 text-score-excellent' :
+                      header.status === 'missing' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'
+                    }`}>
+                      {header.status === 'present' ? 'Present' : header.status === 'missing' ? 'Missing' : 'Misconfigured'}
+                    </span>
+                  </td>
+                  <td className="py-2 px-3 text-xs text-muted-foreground">{header.details}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Issues & Recommendation */}
+        <div className="space-y-2 mb-4">
+          {data.security.issues.map((issue, i) => (
+            <IssueItem key={i} severity={issue.severity} title={issue.title} description={issue.description} />
+          ))}
         </div>
 
         <RecommendationBox
           type="ai"
-          title="Conversion Uplift Potential"
-          description="By improving CTA visibility, adding social proof near forms, and reducing form fields from 5 to 3, expect 15-25% conversion rate improvement."
+          title="Security Recommendation"
+          description={data.security.recommendation}
         />
       </PDFPage>
 
-      {/* Page 8: Security & Trust */}
-      <PDFPage pageNumber={8} totalPages={totalPages}>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2.5 rounded-lg bg-primary/10">
-            <Lock className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-foreground">Security & Trust</h2>
-            <p className="text-xs text-muted-foreground">Security headers and trust signals</p>
-          </div>
-        </div>
-
-        <div className="bg-card rounded-lg shadow-card border border-border/50 mb-4 p-4">
-          <h3 className="font-semibold text-sm text-foreground mb-3">Security Checklist</h3>
-          <StatusIndicator label="SSL Certificate" status="pass" details="Valid until Dec 2025" />
-          <StatusIndicator label="HTTPS Redirect" status="pass" details="All traffic redirected" />
-          <StatusIndicator label="HSTS Header" status="fail" details="Not implemented" />
-          <StatusIndicator label="Content Security Policy" status="partial" details="Basic policy, can be stricter" />
-          <StatusIndicator label="X-Frame-Options" status="pass" details="DENY configured" />
-          <StatusIndicator label="X-Content-Type-Options" status="pass" details="nosniff enabled" />
-        </div>
-
-        <div className="bg-card rounded-lg shadow-card border border-border/50 p-4">
-          <h3 className="font-semibold text-sm text-foreground mb-3">Trust Signals Audit</h3>
-          <StatusIndicator label="Privacy Policy" status="pass" details="Accessible in footer" />
-          <StatusIndicator label="Contact Information" status="pass" details="Phone and email visible" />
-          <StatusIndicator label="Customer Reviews" status="partial" details="Limited visibility" />
-          <StatusIndicator label="Security Badges" status="fail" details="No trust seals displayed" />
-          <StatusIndicator label="Money-Back Guarantee" status="fail" details="Not mentioned" />
-        </div>
-      </PDFPage>
-
-      {/* Page 9: Strategic Roadmap */}
+      {/* Page 9: Optimization Roadmap */}
       <PDFPage pageNumber={9} totalPages={totalPages}>
-        <h2 className="text-xl font-bold text-foreground mb-1">Strategic Action Roadmap</h2>
-        <p className="text-xs text-muted-foreground mb-5">Phased implementation plan for maximum impact</p>
+        <h2 className="text-xl font-bold text-foreground mb-4">Optimization Roadmap</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Prioritized action plan for maximum impact
+        </p>
 
-        <RoadmapPhase
-          phase="Phase 1"
-          title="Quick Wins"
-          timeline="Week 1-2"
-          status="current"
-          items={[
-            { title: "Optimize and compress all images", description: "Use WebP format, lazy loading" },
-            { title: "Add missing meta descriptions", description: "12 pages need descriptions" },
-            { title: "Implement HSTS header", description: "Critical security improvement" },
-            { title: "Increase CTA button sizes to 44px", description: "Mobile UX improvement" },
-          ]}
-        />
-
-        <RoadmapPhase
-          phase="Phase 2"
-          title="Medium-Term Improvements"
-          timeline="Week 3-6"
-          status="upcoming"
-          items={[
-            { title: "Implement structured data markup", description: "Organization, Product, FAQ schemas" },
-            { title: "Optimize JavaScript delivery", description: "Code splitting, async loading" },
-            { title: "Add trust badges and social proof", description: "Reviews, security seals" },
-            { title: "Improve form conversion", description: "Reduce fields, add progress indicators" },
-          ]}
-        />
-
-        <RoadmapPhase
-          phase="Phase 3"
-          title="Long-Term Growth"
-          timeline="Month 2-3"
-          status="upcoming"
-          items={[
-            { title: "Implement A/B testing framework", description: "Test CTAs, layouts, copy" },
-            { title: "Build internal linking strategy", description: "Topic clusters, pillar pages" },
-            { title: "Create content optimization plan", description: "SEO-driven content calendar" },
-            { title: "Set up performance monitoring", description: "Real-time Core Web Vitals tracking" },
-          ]}
-        />
+        <div className="space-y-6">
+          <RoadmapPhase
+            phase={1}
+            title="Quick Wins"
+            description="High impact, low effort improvements"
+            items={data.roadmap.phase1}
+          />
+          <RoadmapPhase
+            phase={2}
+            title="Strategic Improvements"
+            description="Medium-term optimization projects"
+            items={data.roadmap.phase2}
+          />
+          <RoadmapPhase
+            phase={3}
+            title="Advanced Optimization"
+            description="Long-term growth initiatives"
+            items={data.roadmap.phase3}
+          />
+        </div>
       </PDFPage>
 
-      {/* Page 10: Final Insights */}
+      {/* Page 10: Final Recommendations */}
       <PDFPage pageNumber={10} totalPages={totalPages}>
-        <h2 className="text-xl font-bold text-foreground mb-4">Final Insights & Next Steps</h2>
+        <h2 className="text-xl font-bold text-foreground mb-4">Growth Recommendations</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Key takeaways and next steps for your website
+        </p>
 
-        <div className="bg-accent/5 border border-accent/20 rounded-lg p-4 mb-5">
-          <h3 className="font-semibold text-sm text-foreground mb-2">Conclusion</h3>
-          <p className="text-xs text-muted-foreground leading-relaxed mb-2">
-            Your website has a solid foundation with good security practices and mobile responsiveness. 
-            The primary opportunities lie in performance optimization (especially image handling) and 
-            SEO improvements (structured data, meta descriptions). Implementing the Phase 1 quick wins 
-            alone could yield a 15-20% improvement in Core Web Vitals and organic search visibility.
-          </p>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            With systematic implementation of all phases, expect to see significant improvements in 
-            user engagement, search rankings, and conversion rates within 90 days.
-          </p>
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          {data.recommendations.map((rec, i) => (
+            <div key={i} className={`rounded-lg p-4 border ${
+              rec.priority === 'high' ? 'bg-primary/5 border-primary/20' :
+              rec.priority === 'medium' ? 'bg-accent/5 border-accent/20' : 'bg-secondary/50 border-border/50'
+            }`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                  rec.priority === 'high' ? 'bg-primary/10 text-primary' :
+                  rec.priority === 'medium' ? 'bg-accent/10 text-accent' : 'bg-muted text-muted-foreground'
+                }`}>
+                  {rec.priority.toUpperCase()}
+                </span>
+                <span className="text-[10px] text-muted-foreground">{rec.category}</span>
+              </div>
+              <h4 className="font-semibold text-sm text-foreground mb-1">{rec.title}</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">{rec.description}</p>
+            </div>
+          ))}
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mb-5">
-          <div className="bg-card rounded-lg p-4 shadow-card border border-border/50 text-center">
-            <p className="text-2xl font-bold text-score-excellent mb-1">+25%</p>
-            <p className="text-xs text-muted-foreground">Expected Traffic Growth</p>
-          </div>
-          <div className="bg-card rounded-lg p-4 shadow-card border border-border/50 text-center">
-            <p className="text-2xl font-bold text-accent mb-1">+15%</p>
-            <p className="text-xs text-muted-foreground">Conversion Rate Uplift</p>
-          </div>
-          <div className="bg-card rounded-lg p-4 shadow-card border border-border/50 text-center">
-            <p className="text-2xl font-bold text-info mb-1">2x</p>
-            <p className="text-xs text-muted-foreground">Page Speed Improvement</p>
-          </div>
-        </div>
-
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-          <h3 className="font-semibold text-sm text-foreground mb-3 flex items-center gap-2">
-            <ArrowRight className="w-4 h-4 text-primary" />
-            Ready to Get Started?
-          </h3>
-          <p className="text-xs text-muted-foreground mb-3">
-            Our team is ready to help you implement these recommendations and track your progress.
+        {/* Footer CTA */}
+        <div className="bg-primary/10 rounded-xl p-6 text-center border border-primary/20">
+          <h3 className="text-lg font-bold text-foreground mb-2">Ready to Optimize?</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Our team can help you implement these recommendations and improve your website performance.
           </p>
-          <div className="flex items-center gap-3">
-            <div className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-xs font-medium">
-              Schedule a Strategy Call
-            </div>
-            <div className="border border-primary text-primary px-4 py-2 rounded-lg text-xs font-medium">
-              Download Full Report
-            </div>
+          <div className="inline-flex items-center gap-2 text-primary font-medium text-sm">
+            Get Expert Help <ArrowRight className="w-4 h-4" />
           </div>
         </div>
       </PDFPage>
