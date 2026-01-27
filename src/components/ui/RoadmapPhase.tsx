@@ -1,59 +1,64 @@
 import { cn } from "@/lib/utils";
-import { CheckCircle2, Circle, Clock } from "lucide-react";
-
-interface RoadmapItem {
-  title: string;
-  description?: string;
-}
+import { CheckCircle2, Circle, Clock, ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { RoadmapItem } from "@/types/audit";
 
 interface RoadmapPhaseProps {
-  phase: string;
+  phase: number;
   title: string;
-  timeline: string;
+  description?: string;
   items: RoadmapItem[];
-  status?: "completed" | "current" | "upcoming";
   className?: string;
 }
 
-const statusConfig = {
-  completed: {
+const phaseConfig = {
+  1: {
     icon: CheckCircle2,
     iconColor: "text-score-excellent",
-    lineColor: "bg-score-excellent",
     bg: "bg-score-excellent/10",
     border: "border-score-excellent/30",
+    timeline: "Week 1-2",
   },
-  current: {
+  2: {
     icon: Circle,
     iconColor: "text-accent",
-    lineColor: "bg-accent",
     bg: "bg-accent/10",
     border: "border-accent/30",
+    timeline: "Week 3-4",
   },
-  upcoming: {
+  3: {
     icon: Circle,
     iconColor: "text-muted-foreground",
-    lineColor: "bg-border",
     bg: "bg-secondary",
     border: "border-border",
+    timeline: "Month 2+",
   },
+};
+
+const impactConfig = {
+  high: { icon: ArrowUp, color: "text-score-excellent", label: "High Impact" },
+  medium: { icon: Minus, color: "text-warning", label: "Medium Impact" },
+  low: { icon: ArrowDown, color: "text-muted-foreground", label: "Low Impact" },
+};
+
+const effortConfig = {
+  low: "Easy",
+  medium: "Moderate",
+  high: "Complex",
 };
 
 export const RoadmapPhase = ({
   phase,
   title,
-  timeline,
+  description,
   items,
-  status = "upcoming",
   className,
 }: RoadmapPhaseProps) => {
-  const config = statusConfig[status];
+  const config = phaseConfig[phase as keyof typeof phaseConfig] || phaseConfig[3];
   const Icon = config.icon;
 
   return (
     <div className={cn(
       "roadmap-phase relative pl-7",
-      // Prevent page breaks inside
       "break-inside-avoid",
       className
     )}>
@@ -67,31 +72,46 @@ export const RoadmapPhase = ({
         </div>
       </div>
 
-      {/* Content - compact spacing */}
+      {/* Content */}
       <div className="pb-5">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-[10px] font-semibold text-accent uppercase tracking-wider">
-            {phase}
+            Phase {phase}
           </span>
           <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
             <Clock className="w-2.5 h-2.5" />
-            {timeline}
+            {config.timeline}
           </div>
         </div>
-        <h4 className="text-base font-semibold text-foreground mb-2">{title}</h4>
-        <ul className="space-y-1.5">
-          {items.map((item, index) => (
-            <li key={index} className="flex items-start gap-1.5">
-              <div className="w-1 h-1 rounded-full bg-muted-foreground mt-1.5 flex-shrink-0" />
-              <div className="min-w-0">
-                <span className="text-xs text-foreground">{item.title}</span>
-                {item.description && (
-                  <span className="text-[10px] text-muted-foreground ml-1">— {item.description}</span>
-                )}
+        <h4 className="text-base font-semibold text-foreground mb-1">{title}</h4>
+        {description && (
+          <p className="text-xs text-muted-foreground mb-3">{description}</p>
+        )}
+        
+        <div className="space-y-2">
+          {items.map((item, index) => {
+            const impact = impactConfig[item.impact];
+            const ImpactIcon = impact.icon;
+            
+            return (
+              <div key={index} className="bg-card rounded-lg p-3 border border-border/50">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <h5 className="text-xs font-medium text-foreground mb-0.5">{item.title}</h5>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">{item.description}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    <div className="flex items-center gap-1">
+                      <ImpactIcon className={cn("w-3 h-3", impact.color)} />
+                      <span className={cn("text-[9px] font-medium", impact.color)}>{impact.label}</span>
+                    </div>
+                    <span className="text-[9px] text-muted-foreground">{effortConfig[item.effort]} effort</span>
+                  </div>
+                </div>
               </div>
-            </li>
-          ))}
-        </ul>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

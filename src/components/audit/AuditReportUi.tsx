@@ -3,6 +3,8 @@ import { FileText, Globe, ShoppingBag, ChevronRight, Sparkles } from "lucide-rea
 import { cn } from "@/lib/utils";
 import { WebsiteAuditPDF } from "@/components/pdf/WebsiteAuditPDF";
 import { ProductAuditPDF } from "@/components/pdf/ProductAuditPDF";
+import { websiteAuditMockData } from "@/mock/websiteAuditMock";
+import { productAuditMockData } from "@/mock/productAuditMock";
 
 type ReportType = "website" | "product" | null;
 
@@ -38,7 +40,11 @@ const Index = () => {
           </div>
 
           {/* PDF Preview */}
-          {selectedReport === "website" ? <WebsiteAuditPDF /> : <ProductAuditPDF />}
+          {selectedReport === "website" ? (
+            <WebsiteAuditPDF data={websiteAuditMockData} />
+          ) : (
+            <ProductAuditPDF data={productAuditMockData} />
+          )}
         </div>
       </div>
     );
