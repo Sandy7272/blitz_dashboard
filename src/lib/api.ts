@@ -43,5 +43,11 @@ export const api = {
   getDashboardStats: async () => {
     const res = await axios.get(`${API_BASE}/dashboard-stats`);
     return res.data;
+  },
+
+  // 7. Analyze Brand (Sync)
+  analyzeBrand: async (url: string) => {
+    const res = await axios.post(`${API_BASE}/analyze-brand-sync`, { url });
+    return res.data; // { voice, colors, instagram_style }
   }
 };

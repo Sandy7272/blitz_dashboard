@@ -2,8 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -12,9 +11,9 @@ import History from "./pages/History";
 import Billing from "./pages/Billing";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
-
-// 👉 PDF render preview page (create this file if not yet)
-import PDFRenderPage from "./pages/PDFRenderPage";
+import MissionControl from "./pages/MissionControl";
+import BrandDNA from "./pages/BrandDNA";
+import DeployAgent from "./pages/DeployAgent";
 
 const queryClient = new QueryClient();
 
@@ -23,21 +22,17 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<MissionControl />} />
+          <Route path="/brand-dna" element={<BrandDNA />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/workspace" element={<Workspace />} />
+          <Route path="/deploy" element={<DeployAgent />} />
           <Route path="/history" element={<History />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/profile" element={<Profile />} />
-
-          {/* Hidden PDF render route */}
-          <Route path="/pdf-render" element={<PDFRenderPage />} />
-
-          {/* Catch all */}
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -10,8 +10,12 @@ import {
   Zap,
   ChevronLeft,
   ChevronRight,
-  HelpCircle
+  HelpCircle,
+  Fingerprint,
+  Hexagon,
+  Library
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { FeatureTooltip } from "@/components/onboarding/FeatureTooltip";
@@ -23,8 +27,12 @@ interface NavItem {
   tooltip: string;
 }
 
-const mainNavItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/", tooltip: "Overview of your account and quick access to all tools" },
+const menuItems: NavItem[] = [
+  { icon: LayoutDashboard, label: "Mission Control", path: "/" , tooltip: "Overview of your account and stats" },
+  { icon: Zap, label: "Deploy Agent", path: "/deploy", tooltip: "Deploy your AI agents" }, // Was 'Workspace'
+  { icon: Fingerprint, label: "Brand DNA", path: "/brand-dna", tooltip: "Manage your brand identity" }, // New
+  { icon: Library, label: "Asset Factory", path: "/assets", tooltip: "Create and manage your assets" }, // Was 'History'
+  { icon: Hexagon, label: "MetaShop 3D", path: "/3d-studio", tooltip: "Create 3D models and scenes" }, // New Upsell
   { icon: Wand2, label: "Workspace", path: "/workspace", tooltip: "Create and enhance images with AI" },
   { icon: History, label: "History", path: "/history", tooltip: "View all your previously generated images" },
   { icon: CreditCard, label: "Billing", path: "/billing", tooltip: "Manage your subscription and buy credits" },
@@ -46,168 +54,44 @@ export function Sidebar() {
   };
 
   return (
-    <motion.aside
-      initial={{ x: -20, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      className={`fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border z-50 hidden lg:flex flex-col transition-all duration-300 ${
-        isCollapsed ? "w-20" : "w-64"
-      }`}
-    >
-      {/* Logo */}
-      <div className="p-6 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center glow-primary-subtle">
-            <Zap className="w-5 h-5 text-primary" />
+    <div className="h-screen w-64 bg-background border-r border-border flex flex-col fixed left-0 top-0">
+      <div className="p-6">
+        <div className="flex items-center gap-2 mb-8">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <span className="font-display font-bold text-black text-xl">B</span>
           </div>
-          {!isCollapsed && (
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-xl font-display font-bold text-foreground"
-            >
-              Blitz AI
-            </motion.span>
-          )}
-        </Link>
-        <FeatureTooltip content={isCollapsed ? "Expand sidebar" : "Collapse sidebar"} side="right">
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-2 rounded-lg hover:bg-accent transition-colors"
-            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {isCollapsed ? (
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            ) : (
-              <ChevronLeft className="w-4 h-4 text-muted-foreground" />
-            )}
-          </button>
-        </FeatureTooltip>
-      </div>
+          <span className="font-display font-bold text-xl tracking-tight">Blitz Agent</span>
+        </div>
 
-      {/* Credit Balance */}
-      {!isCollapsed && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mx-4 mb-6"
-        >
-          <div className="glass-card p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-muted-foreground">Credits</span>
-              <FeatureTooltip content="You're on the Pro plan with priority support" side="right">
-                <span className="credit-pill text-xs cursor-help">PRO</span>
-              </FeatureTooltip>
-            </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-display font-bold text-foreground">1,250</span>
-              <span className="text-sm text-muted-foreground">remaining</span>
-            </div>
-            <FeatureTooltip content="Get more credits or upgrade your plan" side="right">
+        <nav className="space-y-2">
+          {menuItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
               <Link
-                to="/billing"
-                className="mt-3 w-full btn-primary text-center block text-xs py-2"
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
+                  isActive 
+                    ? "bg-primary/10 text-primary font-medium" 
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
               >
-                Upgrade Plan
+                <item.icon className={cn("w-5 h-5", isActive ? "text-primary" : "group-hover:text-foreground")} />
+                {item.label}
               </Link>
-            </FeatureTooltip>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Collapsed Credit Indicator */}
-      {isCollapsed && (
-        <FeatureTooltip content="1,250 credits remaining" side="right">
-          <div className="mx-3 mb-6">
-            <div className="p-3 rounded-xl bg-primary/10 text-center cursor-help">
-              <Zap className="w-5 h-5 text-primary mx-auto" />
-            </div>
-          </div>
-        </FeatureTooltip>
-      )}
-
-      {/* Main Navigation */}
-      <nav className="flex-1 px-3 space-y-1">
-        {mainNavItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          const linkContent = (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`sidebar-item ${isActive ? "active" : ""} ${
-                isCollapsed ? "justify-center px-3" : ""
-              }`}
-              aria-label={item.label}
-            >
-              <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!isCollapsed && <span>{item.label}</span>}
-            </Link>
-          );
-
-          if (isCollapsed) {
-            return (
-              <FeatureTooltip key={item.path} content={item.tooltip} side="right">
-                {linkContent}
-              </FeatureTooltip>
             );
-          }
-          return linkContent;
-        })}
-      </nav>
-
-      {/* Bottom Navigation */}
-      <div className="px-3 pb-4 space-y-1">
-        {bottomNavItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          const linkContent = (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`sidebar-item ${isActive ? "active" : ""} ${
-                isCollapsed ? "justify-center px-3" : ""
-              }`}
-              aria-label={item.label}
-            >
-              <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!isCollapsed && <span>{item.label}</span>}
-            </Link>
-          );
-
-          if (isCollapsed) {
-            return (
-              <FeatureTooltip key={item.path} content={item.tooltip} side="right">
-                {linkContent}
-              </FeatureTooltip>
-            );
-          }
-          return linkContent;
-        })}
-        
-        {/* Help / Reset Onboarding */}
-        {!isCollapsed && (
-          <button
-            onClick={resetOnboarding}
-            className="sidebar-item w-full text-muted-foreground hover:text-foreground"
-            title="Show welcome guide again"
-          >
-            <HelpCircle className="w-5 h-5 flex-shrink-0" />
-            <span>Help & Tour</span>
-          </button>
-        )}
-        
-        <FeatureTooltip content="Sign out of your account" side="right">
-          <button
-            className={`sidebar-item w-full text-destructive hover:bg-destructive/10 ${
-              isCollapsed ? "justify-center px-3" : ""
-            }`}
-            aria-label="Logout"
-          >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
-            {!isCollapsed && <span>Logout</span>}
-          </button>
-        </FeatureTooltip>
+          })}
+        </nav>
       </div>
-    </motion.aside>
+
+      <div className="mt-auto p-6 border-t border-border">
+        <Link to="/settings" className="flex items-center gap-3 px-4 py-3 text-muted-foreground hover:text-foreground transition-colors">
+          <Settings className="w-5 h-5" />
+          Settings
+        </Link>
+      </div>
+    </div>
   );
 }
 
