@@ -1,73 +1,203 @@
-# Welcome to your Lovable project
+# Blitz AI Dashboard
 
-## Project info
+A modern SaaS dashboard for AI-powered product photography, food styling, and website audits.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Tech Stack
 
-## How can I edit this code?
+- **Frontend**: React 18, TypeScript, Vite
+- **Styling**: Tailwind CSS, shadcn/ui
+- **State Management**: TanStack Query (React Query)
+- **Authentication**: Auth0 React SDK
+- **Animations**: Framer Motion
+- **HTTP Client**: Axios
 
-There are several ways of editing your application.
+## Project Structure
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+src/
+├── auth/                 # Auth0 authentication module
+│   ├── AuthProvider.tsx  # Auth0 provider wrapper
+│   ├── ProtectedRoute.tsx # Route protection component
+│   ├── useAuth.ts        # Custom auth hook
+│   ├── authConfig.ts     # Auth0 configuration
+│   └── auth.types.ts     # TypeScript types
+├── components/
+│   ├── audit/            # Audit flow components
+│   ├── dashboard/        # Dashboard widgets
+│   ├── layout/           # Layout components (Sidebar, Header)
+│   ├── onboarding/       # Onboarding modals & tooltips
+│   ├── pdf/              # PDF generation components
+│   ├── ui/               # shadcn/ui components
+│   └── workspace/        # Creation wizard components
+├── hooks/                # Custom React hooks
+├── lib/                  # Utilities and API layer
+├── mock/                 # Mock data for development
+├── pages/                # Route pages
+└── types/                # TypeScript type definitions
 ```
 
-**Edit a file directly in GitHub**
+## Authentication Setup (Auth0)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+This project uses Auth0 for secure, enterprise-grade authentication.
 
-**Use GitHub Codespaces**
+### 1. Create an Auth0 Application
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+1. Go to [Auth0 Dashboard](https://manage.auth0.com)
+2. Navigate to **Applications** → **Create Application**
+3. Select **Single Page Application**
+4. Configure the following settings:
+   - **Allowed Callback URLs**: `http://localhost:5173, https://yourdomain.com`
+   - **Allowed Logout URLs**: `http://localhost:5173, https://yourdomain.com`
+   - **Allowed Web Origins**: `http://localhost:5173, https://yourdomain.com`
 
-## What technologies are used for this project?
+### 2. Create an API (Optional - for backend integration)
 
-This project is built with:
+1. Navigate to **APIs** → **Create API**
+2. Set an identifier (audience), e.g., `https://api.blitz.ai`
+3. Enable RBAC and add permissions if needed
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### 3. Configure Environment Variables
 
-## How can I deploy this project?
+Create a `.env.local` file in the project root:
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+```env
+# Auth0 Configuration (Required)
+VITE_AUTH0_DOMAIN=your-tenant.auth0.com
+VITE_AUTH0_CLIENT_ID=your-client-id
 
-## Can I connect a custom domain to my Lovable project?
+# Auth0 API (Optional - for backend API calls)
+VITE_AUTH0_AUDIENCE=https://api.blitz.ai
+```
 
-Yes, you can!
+### 4. Role-Based Access Control (RBAC)
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+To enable RBAC:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+1. In Auth0 Dashboard, go to **User Management** → **Roles**
+2. Create roles: `admin`, `user`, `pro`, `enterprise`
+3. Create an Auth0 Action or Rule to add roles to tokens:
+
+```javascript
+// Auth0 Action: Add roles to tokens
+exports.onExecutePostLogin = async (event, api) => {
+  const namespace = 'https://blitz.ai';
+  const roles = event.authorization?.roles || [];
+  
+  api.idToken.setCustomClaim(`${namespace}/roles`, roles);
+  api.accessToken.setCustomClaim(`${namespace}/roles`, roles);
+};
+```
+
+### 5. Using Authentication in Components
+
+```tsx
+import { useAuth } from '@/auth';
+
+function MyComponent() {
+  const { user, isAuthenticated, login, logout, hasRole } = useAuth();
+
+  if (!isAuthenticated) {
+    return <button onClick={() => login()}>Sign In</button>;
+  }
+
+  return (
+    <div>
+      <p>Welcome, {user?.name}</p>
+      {hasRole('admin') && <AdminPanel />}
+      <button onClick={() => logout()}>Sign Out</button>
+    </div>
+  );
+}
+```
+
+### 6. Protecting Routes
+
+```tsx
+import { ProtectedRoute } from '@/auth';
+
+<Route 
+  path="/dashboard" 
+  element={
+    <ProtectedRoute requiredRole="user">
+      <Dashboard />
+    </ProtectedRoute>
+  } 
+/>
+```
+
+## Development
+
+### Prerequisites
+
+- Node.js 18+ (or Bun)
+- npm, yarn, or bun
+
+### Installation
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Run tests
+npm test
+```
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_AUTH0_DOMAIN` | Yes | Your Auth0 tenant domain |
+| `VITE_AUTH0_CLIENT_ID` | Yes | Your Auth0 application client ID |
+| `VITE_AUTH0_AUDIENCE` | No | API identifier for backend calls |
+
+## Security Best Practices
+
+- ✅ Tokens stored in memory (not localStorage)
+- ✅ Silent refresh using refresh tokens
+- ✅ PKCE flow enabled by default
+- ✅ Automatic token attachment to API calls
+- ✅ Global 401/403 error handling
+- ✅ Protected routes with role-based access
+
+## API Integration
+
+The API layer (`src/lib/api.ts`) automatically:
+
+1. Attaches Bearer tokens to requests
+2. Handles token refresh
+3. Manages 401/403 errors globally
+4. Provides typed request/response interfaces
+
+## Deployment
+
+### Lovable
+
+Click **Share** → **Publish** in the Lovable editor.
+
+### Custom Domain
+
+Navigate to **Project** → **Settings** → **Domains** to connect a custom domain.
+
+### Production Checklist
+
+1. Update Auth0 application URLs for production domain
+2. Set `VITE_AUTH0_*` environment variables in production
+3. Enable Auth0 "Token Endpoint Authentication Method" to "None" for SPA
+4. Configure Auth0 branding for login pages
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+
+MIT

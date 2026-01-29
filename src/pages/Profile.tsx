@@ -1,7 +1,9 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { motion } from "framer-motion";
-import { User, Mail, Globe, LogOut, Camera, Shield, Bell, Palette } from "lucide-react";
+import { User, Mail, Globe, LogOut, Camera, Shield, Bell } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/auth";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const languages = [
   { code: "en", name: "English" },
@@ -10,9 +12,23 @@ const languages = [
 ];
 
 export default function Profile() {
-  const [name, setName] = useState("John Doe");
-  const [email, setEmail] = useState("john@example.com");
+  const { user, logout, isAuthenticated } = useAuth();
   const [language, setLanguage] = useState("en");
+
+  const handleLogout = () => {
+    logout({ returnTo: window.location.origin });
+  };
+
+  // Get user initials for avatar fallback
+  const getInitials = (name?: string) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
     <DashboardLayout>
@@ -44,26 +60,32 @@ export default function Profile() {
             </h2>
             <div className="flex items-center gap-6">
               <div className="relative">
-                <div className="w-24 h-24 rounded-2xl bg-primary/10 flex items-center justify-center overflow-hidden">
-                  <User className="w-12 h-12 text-primary" />
-                </div>
+                <Avatar className="w-24 h-24 rounded-2xl">
+                  <AvatarImage 
+                    src={user?.picture} 
+                    alt={user?.name || 'User'} 
+                  />
+                  <AvatarFallback className="rounded-2xl bg-primary/10 text-primary text-xl font-semibold">
+                    {getInitials(user?.name)}
+                  </AvatarFallback>
+                </Avatar>
                 <button className="absolute -bottom-2 -right-2 p-2 rounded-full bg-primary text-primary-foreground hover:shadow-glow transition-shadow">
                   <Camera className="w-4 h-4" />
                 </button>
               </div>
               <div>
-                <p className="text-foreground font-medium mb-1">John Doe</p>
-                <p className="text-sm text-muted-foreground mb-3">
-                  JPG, PNG or GIF. Max 2MB
+                <p className="text-foreground font-medium mb-1">
+                  {user?.name || 'User'}
                 </p>
-                <div className="flex gap-2">
-                  <button className="btn-secondary text-sm py-2 px-4">
-                    Upload
-                  </button>
-                  <button className="btn-ghost text-sm text-destructive">
-                    Remove
-                  </button>
-                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  {user?.email || 'Not signed in'}
+                </p>
+                {user?.email_verified && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs">
+                    <Shield className="w-3 h-3" />
+                    Verified
+                  </span>
+                )}
               </div>
             </div>
           </motion.div>
@@ -76,7 +98,7 @@ export default function Profile() {
             className="glass-card p-6"
           >
             <h2 className="text-lg font-semibold text-foreground mb-6">
-              Personal Information
+              Account Information
             </h2>
             <div className="grid gap-5">
               <div>
@@ -87,11 +109,14 @@ export default function Profile() {
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <input
                     type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="input-glass pl-12"
+                    value={user?.name || ''}
+                    readOnly
+                    className="input-glass pl-12 bg-secondary/30 cursor-not-allowed"
                   />
                 </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Managed by Auth0. Update in your identity provider.
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
@@ -101,16 +126,13 @@ export default function Profile() {
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <input
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="input-glass pl-12"
+                    value={user?.email || ''}
+                    readOnly
+                    className="input-glass pl-12 bg-secondary/30 cursor-not-allowed"
                   />
                 </div>
               </div>
             </div>
-            <button className="btn-primary mt-6">
-              Save Changes
-            </button>
           </motion.div>
 
           {/* Plan Info */}
@@ -197,14 +219,45 @@ export default function Profile() {
                   <Shield className="w-5 h-5 text-muted-foreground" />
                   <div>
                     <p className="text-foreground font-medium">Two-Factor Authentication</p>
-                    <p className="text-sm text-muted-foreground">Add extra security to your account</p>
+                    <p className="text-sm text-muted-foreground">Managed by Auth0</p>
                   </div>
                 </div>
-                <input
-                  type="checkbox"
-                  className="w-5 h-5 rounded accent-primary"
-                />
+                <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded">
+                  Configure in Auth0
+                </span>
               </label>
+            </div>
+          </motion.div>
+
+          {/* Session Info */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="glass-card p-6"
+          >
+            <h2 className="text-lg font-semibold text-foreground mb-4">
+              Session
+            </h2>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-foreground font-medium">
+                  {isAuthenticated ? 'Signed in' : 'Not signed in'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {user?.updated_at 
+                    ? `Last updated: ${new Date(user.updated_at).toLocaleDateString()}`
+                    : 'Session active'
+                  }
+                </p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="btn-secondary flex items-center gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </button>
             </div>
           </motion.div>
 
@@ -212,7 +265,7 @@ export default function Profile() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
+            transition={{ delay: 0.7 }}
             className="glass-card p-6 border border-destructive/30"
           >
             <h2 className="text-lg font-semibold text-foreground mb-4">
@@ -223,18 +276,6 @@ export default function Profile() {
             </p>
             <button className="btn-ghost text-destructive border border-destructive/30 hover:bg-destructive/10">
               Delete Account
-            </button>
-          </motion.div>
-
-          {/* Logout */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
-          >
-            <button className="btn-secondary w-full flex items-center justify-center gap-2 text-destructive border-destructive/30 hover:bg-destructive/10">
-              <LogOut className="w-5 h-5" />
-              Logout
             </button>
           </motion.div>
         </div>

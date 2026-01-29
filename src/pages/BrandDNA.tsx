@@ -41,7 +41,17 @@ export default function BrandDNA() {
       const dna = await api.analyzeBrand(website);
       
       setVoice(dna.voice);
-      setColors(dna.colors);
+      
+      // Handle colors - could be array or object from backend
+      if (Array.isArray(dna.colors)) {
+        setColors({
+          primary: dna.colors[0] || "#2dffa7",
+          secondary: dna.colors[1] || "#0F0F0F"
+        });
+      } else if (dna.colors && typeof dna.colors === 'object') {
+        setColors(dna.colors);
+      }
+      
       toast.success("Brand DNA extracted from website!");
       
       // We can also append the Instagram style to the voice context implicitly

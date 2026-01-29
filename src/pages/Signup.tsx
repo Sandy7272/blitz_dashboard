@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
-import { Zap, Mail, Lock, User, Eye, EyeOff, ArrowRight, Check } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Zap, ArrowRight, Check, Loader2 } from "lucide-react";
+import { useAuth } from "@/auth";
 
 const features = [
   "500 free credits to start",
@@ -11,20 +12,18 @@ const features = [
 ];
 
 export default function Signup() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const { signup, isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    // Simulate signup
-    setTimeout(() => {
-      setIsLoading(false);
-      window.location.href = "/verify-otp";
-    }, 1500);
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
+  const handleAuth0Signup = async () => {
+    await signup({ returnTo: '/' });
   };
 
   return (
@@ -76,7 +75,7 @@ export default function Signup() {
         </div>
       </div>
 
-      {/* Right Panel - Form */}
+      {/* Right Panel - Auth */}
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <motion.div
           initial={{ opacity: 0, x: 20 }}
@@ -101,95 +100,75 @@ export default function Signup() {
             Get started with 500 free credits
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Full Name
-              </label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="John Doe"
-                  className="input-glass pl-12"
-                  required
-                />
+          {/* Auth0 Signup Button */}
+          <button
+            onClick={handleAuth0Signup}
+            disabled={isLoading}
+            className="btn-primary w-full flex items-center justify-center gap-3 py-4"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Loading...</span>
+              </>
+            ) : (
+              <>
+                <span>Create account with Auth0</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+
+          {/* Divider */}
+          <div className="flex items-center gap-4 my-8">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-muted-foreground text-sm">What you'll get</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          {/* Mobile features */}
+          <div className="lg:hidden space-y-3 mb-8">
+            {features.map((feature, index) => (
+              <motion.div
+                key={feature}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 + index * 0.1 }}
+                className="flex items-center gap-3"
+              >
+                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Check className="w-3 h-3 text-primary" />
+                </div>
+                <span className="text-sm text-foreground">{feature}</span>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Desktop additional info */}
+          <div className="hidden lg:block">
+            <div className="glass-card p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                  <span className="text-lg">🎁</span>
+                </div>
+                <div>
+                  <p className="text-foreground font-medium text-sm">Welcome bonus</p>
+                  <p className="text-muted-foreground text-xs">500 credits to explore all features</p>
+                </div>
               </div>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="input-glass pl-12"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="input-glass pl-12 pr-12"
-                  minLength={8}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Minimum 8 characters
-              </p>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn-primary w-full flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <span className="animate-pulse">Creating account...</span>
-              ) : (
-                <>
-                  Create account
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-
-            <p className="text-xs text-muted-foreground text-center">
-              By signing up, you agree to our{" "}
-              <Link to="/terms" className="text-primary hover:underline">
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link to="/privacy" className="text-primary hover:underline">
-                Privacy Policy
-              </Link>
-            </p>
-          </form>
+          <p className="text-xs text-muted-foreground text-center mt-6">
+            By signing up, you agree to our{" "}
+            <Link to="/terms" className="text-primary hover:underline">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link to="/privacy" className="text-primary hover:underline">
+              Privacy Policy
+            </Link>
+          </p>
 
           <div className="mt-8 text-center">
             <p className="text-muted-foreground">

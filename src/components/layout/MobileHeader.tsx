@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Zap, Settings, LogOut, ChevronRight } from "lucide-react";
+import { Menu, Zap, Settings, LogOut, ChevronRight } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/auth";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sheet,
   SheetContent,
@@ -25,12 +26,34 @@ const workflowItems = [
 export function MobileHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { user, logout, isAuthenticated, login } = useAuth();
 
   const isActive = (path: string) => {
     if (path.includes("?")) {
       return location.pathname + location.search === path;
     }
     return location.pathname === path;
+  };
+
+  const handleLogout = () => {
+    setIsOpen(false);
+    logout({ returnTo: window.location.origin });
+  };
+
+  const handleLogin = async () => {
+    setIsOpen(false);
+    await login();
+  };
+
+  // Get user initials for avatar fallback
+  const getInitials = (name?: string) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
@@ -71,13 +94,30 @@ export function MobileHeader() {
                 <div className="p-4 border-b border-sidebar-border">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Zap className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-foreground">Blitz AI</p>
-                        <p className="text-xs text-muted-foreground">Pro Plan</p>
-                      </div>
+                      {isAuthenticated && user ? (
+                        <>
+                          <Avatar className="w-10 h-10">
+                            <AvatarImage src={user.picture} alt={user.name || 'User'} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                              {getInitials(user.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-semibold text-foreground">{user.name || 'User'}</p>
+                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                            <Zap className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-foreground">Blitz AI</p>
+                            <p className="text-xs text-muted-foreground">Not signed in</p>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -146,10 +186,24 @@ export function MobileHeader() {
                     <Settings className="w-5 h-5" />
                     <span className="font-medium">Settings</span>
                   </Link>
-                  <button className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-destructive hover:bg-destructive/10 transition-colors w-full">
-                    <LogOut className="w-5 h-5" />
-                    <span className="font-medium">Logout</span>
-                  </button>
+                  
+                  {isAuthenticated ? (
+                    <button 
+                      onClick={handleLogout}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-destructive hover:bg-destructive/10 transition-colors w-full"
+                    >
+                      <LogOut className="w-5 h-5" />
+                      <span className="font-medium">Sign Out</span>
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={handleLogin}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-primary hover:bg-primary/10 transition-colors w-full"
+                    >
+                      <Zap className="w-5 h-5" />
+                      <span className="font-medium">Sign In</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </SheetContent>
