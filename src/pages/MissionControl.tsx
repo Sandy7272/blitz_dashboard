@@ -11,12 +11,12 @@ interface Mission {
   timestamp: number;
   thumbnail?: string;
   resultUrl?: string;
-  // New Field for Agent Copy
+  // New Field for Agent Copy - can be object or string from API
   socialCopy?: {
     headline: string;
     caption: string;
     hashtags: string[];
-  };
+  } | string;
 }
 
 // Map backend statuses to UI states
@@ -172,8 +172,12 @@ export default function MissionControl() {
                                  <span className="text-xs font-bold text-primary tracking-wider">GENERATED CAPTION</span>
                                  <button 
                                    onClick={() => {
-                                     navigator.clipboard.writeText(`${m.socialCopy?.headline}\n\n${m.socialCopy?.caption}\n\n${m.socialCopy?.hashtags.join(' ')}`);
-                                     // You could add a toast here
+                                     const copy = m.socialCopy;
+                                     if (typeof copy === 'string') {
+                                       navigator.clipboard.writeText(copy);
+                                     } else if (copy) {
+                                       navigator.clipboard.writeText(`${copy.headline}\n\n${copy.caption}\n\n${copy.hashtags.join(' ')}`);
+                                     }
                                    }}
                                    className="text-xs flex items-center gap-1 hover:text-white text-muted-foreground transition-colors"
                                  >
@@ -181,9 +185,15 @@ export default function MissionControl() {
                                  </button>
                                </div>
                                <div className="p-3 bg-white/5 rounded-lg text-xs text-muted-foreground font-mono flex-1 overflow-y-auto border border-white/5">
-                                 <p className="font-bold text-white mb-2">{m.socialCopy.headline}</p>
-                                 <p className="mb-3 leading-relaxed">{m.socialCopy.caption}</p>
-                                 <p className="text-blue-400">{m.socialCopy.hashtags.join(' ')}</p>
+                                 {typeof m.socialCopy === 'string' ? (
+                                   <p className="leading-relaxed whitespace-pre-wrap">{m.socialCopy}</p>
+                                 ) : m.socialCopy ? (
+                                   <>
+                                     <p className="font-bold text-white mb-2">{m.socialCopy.headline}</p>
+                                     <p className="mb-3 leading-relaxed">{m.socialCopy.caption}</p>
+                                     <p className="text-blue-400">{m.socialCopy.hashtags.join(' ')}</p>
+                                   </>
+                                 ) : null}
                                </div>
                              </div>
                           ) : (

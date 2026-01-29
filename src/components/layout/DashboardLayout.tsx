@@ -4,6 +4,7 @@ import { MobileBottomNav } from "./MobileBottomNav";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { motion } from "framer-motion";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { useAuthApiSetup } from "@/hooks/useAuthApiSetup";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 interface DashboardLayoutProps {
@@ -12,6 +13,9 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { showWelcome, completeOnboarding } = useOnboarding();
+  
+  // Set up auth token injection for API calls
+  useAuthApiSetup();
 
   return (
     <TooltipProvider>
@@ -46,4 +50,3 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     </TooltipProvider>
   );
 }
-

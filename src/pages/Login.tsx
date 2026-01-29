@@ -1,23 +1,29 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
-import { Zap, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Zap, ArrowRight, Loader2 } from "lucide-react";
+import { useAuth } from "@/auth";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const { login, isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    // Simulate login
-    setTimeout(() => {
-      setIsLoading(false);
-      window.location.href = "/";
-    }, 1500);
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      const from = (location.state as { from?: Location })?.from?.pathname || '/';
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, isLoading, navigate, location]);
+
+  const handleAuth0Login = async () => {
+    const returnTo = (location.state as { from?: Location })?.from?.pathname || '/';
+    await login({ returnTo });
   };
+
+  // Show error if passed from callback
+  const errorMessage = (location.state as { error?: string })?.error;
 
   return (
     <div className="min-h-screen bg-background gradient-radial flex">
@@ -84,7 +90,7 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Right Panel - Form */}
+      {/* Right Panel - Auth */}
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <motion.div
           initial={{ opacity: 0, x: 20 }}
@@ -106,82 +112,67 @@ export default function Login() {
             Welcome back
           </h2>
           <p className="text-muted-foreground mb-8">
-            Enter your credentials to access your account
+            Sign in to access your dashboard and projects
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="input-glass pl-12"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="input-glass pl-12 pr-12"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 rounded border-border bg-secondary accent-primary"
-                />
-                <span className="text-sm text-muted-foreground">Remember me</span>
-              </label>
-              <Link
-                to="/forgot-password"
-                className="text-sm text-primary hover:underline"
-              >
-                Forgot password?
-              </Link>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn-primary w-full flex items-center justify-center gap-2"
+          {/* Error message */}
+          {errorMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20"
             >
-              {isLoading ? (
-                <span className="animate-pulse">Signing in...</span>
-              ) : (
-                <>
-                  Sign in
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
+              <p className="text-destructive text-sm">{errorMessage}</p>
+            </motion.div>
+          )}
+
+          {/* Auth0 Login Button */}
+          <button
+            onClick={handleAuth0Login}
+            disabled={isLoading}
+            className="btn-primary w-full flex items-center justify-center gap-3 py-4"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Loading...</span>
+              </>
+            ) : (
+              <>
+                <span>Sign in with Auth0</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+
+          {/* Divider */}
+          <div className="flex items-center gap-4 my-8">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-muted-foreground text-sm">Secure authentication</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          {/* Features */}
+          <div className="space-y-3">
+            {[
+              'Enterprise-grade security',
+              'Single sign-on (SSO) ready',
+              'Multi-factor authentication',
+            ].map((feature, index) => (
+              <motion.div
+                key={feature}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 + index * 0.1 }}
+                className="flex items-center gap-3 text-muted-foreground"
+              >
+                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+                  <span className="text-primary text-xs">✓</span>
+                </div>
+                <span className="text-sm">{feature}</span>
+              </motion.div>
+            ))}
+          </div>
 
           <div className="mt-8 text-center">
             <p className="text-muted-foreground">

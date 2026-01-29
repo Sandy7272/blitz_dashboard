@@ -53,10 +53,13 @@ export default function Dashboard() {
     const fetchStats = async () => {
       try {
         const data = await api.getDashboardStats();
+        const healthStatus = typeof data.system_health === 'object' 
+          ? data.system_health?.status 
+          : (data.system_health ? 'Online' : 'Offline');
         setStatsData({
             audits: data.audits_completed || 0,
             threeD: data.three_d_requests || 0,
-            systemStatus: data.system_health?.status || "Online"
+            systemStatus: healthStatus || "Online"
         });
       } catch (e) {
         console.error("Failed to fetch stats", e);
