@@ -3,6 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Upload, Save, Type, Palette, Mic, Globe, Instagram, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { useAuth0 } from "@auth0/auth0-react"; // Assuming Auth0 is used
 
 export default function BrandDNA() {
   const [colors, setColors] = useState({ primary: "#2dffa7", secondary: "#0F0F0F" });
@@ -11,21 +12,43 @@ export default function BrandDNA() {
   const [instagram, setInstagram] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Load initial state
+  const { user } = useAuth0(); // Get logged in user
+
+  // REPLACE useEffect for loading
   useEffect(() => {
-    const saved = localStorage.getItem("brand_dna");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.colors) setColors(parsed.colors);
-      if (parsed.voice) setVoice(parsed.voice);
-      if (parsed.website) setWebsite(parsed.website);
-      if (parsed.instagram) setInstagram(parsed.instagram);
-    }
-  }, []);
+    if (!user?.sub) return;
+    
+    const loadDNA = async () => {
+      try {
+        const data = await api.getBrandDNA(user.sub);
+        if (data) {
+          if (data.colors) setColors(data.colors);
+          if (data.voice) setVoice(data.voice);
+          if (data.website) setWebsite(data.website);
+          if (data.instagram) setInstagram(data.instagram);
+        }
+      } catch (e) {
+        console.log("No existing DNA found, starting fresh.");
+      }
+    };
+    loadDNA();
+  }, [user]);
   
-  const handleSave = () => {
-    localStorage.setItem("brand_dna", JSON.stringify({ colors, voice, website, instagram }));
-    toast.success("Brand DNA updated. Agents will now follow these rules.");
+  // REPLACE handleSave
+  const handleSave = async () => {
+    if (!user?.sub) return toast.error("Please log in to save.");
+    
+    try {
+      await api.saveBrandDNA(user.sub, { 
+        colors, 
+        voice, 
+        website, 
+        instagram 
+      });
+      toast.success("Brand DNA saved to cloud.");
+    } catch (e) {
+      toast.error("Failed to save.");
+    }
   };
 
   const handleAnalyze = async () => {

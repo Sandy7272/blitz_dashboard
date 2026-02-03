@@ -1,215 +1,176 @@
+import { useEffect, useState, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { motion } from "framer-motion";
-import { Zap, Check, CreditCard, Download, ArrowRight } from "lucide-react";
-import { useState } from "react";
-
-const plans = [
-  {
-    name: "Starter",
-    price: "₹499",
-    credits: 100,
-    features: ["100 AI credits", "All workflows", "Email support", "720p exports"],
-    popular: false,
-  },
-  {
-    name: "Pro",
-    price: "₹1,499",
-    credits: 500,
-    features: ["500 AI credits", "All workflows", "Priority support", "4K exports", "API access"],
-    popular: true,
-  },
-  {
-    name: "Enterprise",
-    price: "₹4,999",
-    credits: 2000,
-    features: ["2000 AI credits", "All workflows", "24/7 support", "4K exports", "API access", "Custom models"],
-    popular: false,
-  },
-];
-
-const invoices = [
-  { id: "INV-001", date: "Jan 15, 2024", amount: "₹1,499", status: "Paid" },
-  { id: "INV-002", date: "Dec 15, 2023", amount: "₹1,499", status: "Paid" },
-  { id: "INV-003", date: "Nov 15, 2023", amount: "₹499", status: "Paid" },
-];
+import { Check, CreditCard, Zap, Loader2, AlertCircle } from "lucide-react";
+import { useAuth0 } from "@auth0/auth0-react";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
+import { load } from '@cashfreepayments/cashfree-js';
 
 export default function Billing() {
-  const [selectedPlan, setSelectedPlan] = useState("Pro");
+  const { user } = useAuth0();
+  const [loading, setLoading] = useState(false);
+  const [credits, setCredits] = useState<number | null>(null); // State for credits
+  const [cashfree, setCashfree] = useState<any>(null);
+
+  // 1. Fetch Credits Function
+  const fetchCredits = useCallback(async () => {
+    if (!user?.sub) return;
+    try {
+      const profile = await api.getUserProfile(user.sub);
+      setCredits(profile.credits);
+    } catch (e) {
+      console.error("Failed to load credits");
+    }
+  }, [user]);
+
+  // 2. Load Credits on Mount
+  useEffect(() => {
+    fetchCredits();
+  }, [fetchCredits]);
+
+  // 1. Load Cashfree SDK
+  useEffect(() => {
+    const initCashfree = async () => {
+      try {
+        const cf = await load({ mode: "production" }); // Change to "production" for live
+        setCashfree(cf);
+      } catch (e) {
+        console.error("Cashfree SDK failed to load", e);
+      }
+    };
+    initCashfree();
+  }, []);
+
+  const handlePurchase = async () => {
+    if (!user?.sub || !cashfree) return;
+    
+    try {
+      setLoading(true); // Button Loading Starts
+      
+      // 1. Create Order (Backend call)
+      const res = await api.createCashfreeOrder(user.sub, user.email);
+      const { payment_session_id, order_id } = res;
+
+      // 2. Open Checkout
+      const checkoutOptions = {
+        paymentSessionId: payment_session_id,
+        redirectTarget: "_modal",
+      };
+
+      // FIX: await this promise so errors are caught!
+      const result = await cashfree.checkout(checkoutOptions);
+
+      if(result.error){
+          // User closed popup or error occurred
+          setLoading(false); // Reset Button
+          toast.error(result.error.message || "Payment cancelled");
+      }
+      if(result.paymentDetails){
+          // Payment Success
+          await verifyPayment(order_id);
+      }
+      
+    } catch (e: any) {
+      console.error("Payment Error:", e);
+      
+      // Check if the backend sent a specific error message
+      if (e.response && e.response.data) {
+        console.error("Backend Details:", e.response.data);
+        toast.error(`Error: ${e.response.data.error || "Payment init failed"}`);
+      } else {
+        toast.error("Failed to initiate payment");
+      }
+      setLoading(false);
+    }
+  };
+
+  // 3. Update verifyPayment to refresh credits
+  const verifyPayment = async (orderId: string) => {
+    try {
+        const res = await api.verifyCashfreeOrder(orderId, user!.sub!);
+        if (res.status === 'success') {
+            toast.success("Payment Successful! Credits Added.");
+            fetchCredits(); // <--- REFRESH CREDITS HERE
+        } else {
+            toast.warning("Payment processing. Check back shortly.");
+        }
+    } catch (e) {
+        toast.error("Verification failed. Please contact support.");
+    } finally {
+        setLoading(false);
+    }
+  };
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-10"
-        >
-          <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-            Billing & Plans
-          </h1>
-          <p className="text-muted-foreground">
-            Manage your subscription and purchase credits
-          </p>
-        </motion.div>
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div>
+          <h1 className="text-3xl font-display font-bold">Billing & Credits</h1>
+          <p className="text-muted-foreground">Simple, transparent pricing. Pay as you go.</p>
+        </div>
 
-        {/* Current Plan */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="glass-card p-6 mb-10"
-        >
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h2 className="text-xl font-semibold text-foreground">Current Plan</h2>
-                <span className="credit-pill text-xs">PRO</span>
-              </div>
-              <p className="text-muted-foreground">
-                Next billing date: February 15, 2024
-              </p>
-            </div>
+        {/* Current Balance Card */}
+        <div className="glass-card p-6 flex items-center justify-between bg-gradient-to-r from-primary/10 to-transparent border-primary/20">
             <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Credits remaining</p>
-                <p className="text-2xl font-display font-bold text-primary">1,250</p>
-              </div>
-              <button className="btn-primary">
-                Buy Credits
-              </button>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Plans Grid */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="mb-10"
-        >
-          <h2 className="text-xl font-display font-semibold text-foreground mb-6">
-            Available Plans
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {plans.map((plan, index) => (
-              <motion.div
-                key={plan.name}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 + index * 0.1 }}
-                className={`glass-card p-6 relative ${
-                  plan.popular ? "border-primary/50 glow-primary-subtle" : ""
-                }`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="px-4 py-1 rounded-full bg-primary text-primary-foreground text-xs font-medium">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-                
-                <div className="text-center mb-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    {plan.name}
-                  </h3>
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-3xl font-display font-bold text-foreground">
-                      {plan.price}
-                    </span>
-                    <span className="text-muted-foreground">/month</span>
-                  </div>
-                  <p className="text-sm text-primary mt-2">
-                    <Zap className="w-4 h-4 inline mr-1" />
-                    {plan.credits} credits
-                  </p>
+                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                    <Zap className="w-6 h-6 text-primary" />
                 </div>
+                <div>
+                    <h2 className="text-lg font-bold">Current Balance</h2>
+                    <p className="text-sm text-muted-foreground">Credits available for generation</p>
+                </div>
+            </div>
+            <div className="text-3xl font-mono font-bold">
+               {/* Display Credits or Loading State */}
+               {credits !== null ? credits : <Loader2 className="w-6 h-6 animate-spin inline" />} Cr
+            </div>
+        </div>
 
-                <ul className="space-y-3 mb-6">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Check className="w-4 h-4 text-primary flex-shrink-0" />
-                      {feature}
+        {/* Pricing Card */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="glass-card p-8 border-2 border-primary relative overflow-hidden group">
+                <div className="absolute top-0 right-0 bg-primary text-black text-xs font-bold px-3 py-1 rounded-bl-lg">
+                    POPULAR
+                </div>
+                
+                <h3 className="text-xl font-bold mb-2">Power Pack</h3>
+                <div className="flex items-baseline gap-1 mb-6">
+                    <span className="text-4xl font-bold">$20</span>
+                    <span className="text-muted-foreground">/ one-time</span>
+                </div>
+                
+                <ul className="space-y-3 mb-8">
+                    <li className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-primary" /> 10 Professional Posts
                     </li>
-                  ))}
+                    <li className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-primary" /> All AI Formats (Story, Feed)
+                    </li>
+                    <li className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-primary" /> High-Res Downloads
+                    </li>
+                    <li className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-primary" /> Commercial License
+                    </li>
                 </ul>
 
-                <button
-                  onClick={() => setSelectedPlan(plan.name)}
-                  className={`w-full ${
-                    plan.popular ? "btn-primary" : "btn-secondary"
-                  }`}
+                <button 
+                    onClick={handlePurchase}
+                    disabled={loading}
+                    className="w-full btn-primary py-3 flex items-center justify-center gap-2"
                 >
-                  {selectedPlan === plan.name ? "Current Plan" : "Upgrade"}
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                    {loading ? "Processing..." : "Buy 10 Credits"}
                 </button>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Invoice History */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          <h2 className="text-xl font-display font-semibold text-foreground mb-6">
-            Invoice History
-          </h2>
-          <div className="glass-card overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">
-                    Invoice
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">
-                    Date
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">
-                    Amount
-                  </th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="text-right p-4 text-sm font-medium text-muted-foreground">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.map((invoice) => (
-                  <tr
-                    key={invoice.id}
-                    className="border-b border-border last:border-0 hover:bg-accent/50 transition-colors"
-                  >
-                    <td className="p-4 text-sm text-foreground font-medium">
-                      {invoice.id}
-                    </td>
-                    <td className="p-4 text-sm text-muted-foreground">
-                      {invoice.date}
-                    </td>
-                    <td className="p-4 text-sm text-foreground">
-                      {invoice.amount}
-                    </td>
-                    <td className="p-4">
-                      <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                        {invoice.status}
-                      </span>
-                    </td>
-                    <td className="p-4 text-right">
-                      <button className="btn-ghost text-sm">
-                        <Download className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
+            </div>
+            
+            {/* Enterprise / Contact */}
+            <div className="glass-card p-8 flex flex-col justify-center text-center opacity-80 hover:opacity-100 transition-opacity">
+                <h3 className="text-xl font-bold mb-2">Enterprise</h3>
+                <p className="text-sm text-muted-foreground mb-6">Need bulk generation or custom integrations?</p>
+                <button className="btn-secondary w-full py-3">Contact Sales</button>
+            </div>
+        </div>
       </div>
     </DashboardLayout>
   );

@@ -25,34 +25,27 @@ export function ProtectedRoute({
   const { isAuthenticated, isLoading, hasRole, hasPermission } = useAuth();
   const location = useLocation();
 
-  // If Auth0 is not configured, allow access in development
-  if (!isAuthConfigured) {
-    return <>{children}</>;
-  }
-
-  // Show loading state while checking authentication
+  // 1. WAIT: If Auth0 is still loading, show a spinner instead of redirecting
   if (isLoading) {
-    return <AuthLoadingScreen />;
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
-  // Redirect to login if not authenticated
+  // 2. CHECK: If loading is done and still not authenticated, THEN redirect
   if (!isAuthenticated) {
-    // Save the attempted location for redirect after login
-    return <Navigate to={fallbackPath} state={{ from: location }} replace />;
+    return <Navigate to="/login" replace />;
   }
 
-  // Check for required role
+  // 3. ROLE CHECK (Optional): If roles are required
   if (requiredRole && !hasRole(requiredRole)) {
-    return <AccessDenied message="You don't have the required role to access this page." />;
-  }
-
-  // Check for required permission
-  if (requiredPermission && !hasPermission(requiredPermission)) {
-    return <AccessDenied message="You don't have permission to access this page." />;
+    return <Navigate to="/dashboard" replace />; // or an unauthorized page
   }
 
   return <>{children}</>;
-}
+};
 
 // Loading screen component
 function AuthLoadingScreen() {

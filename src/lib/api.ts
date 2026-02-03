@@ -111,10 +111,10 @@ export interface BrandAnalysis {
 // API methods with proper typing
 export const api = {
   // 1. Create Job & Get Upload URL (For Photos)
-  createPhotoJob: async (fileTypes: string[]): Promise<JobCreateResponse> => {
+  /*createPhotoJob: async (fileTypes: string[]): Promise<JobCreateResponse> => {
     const res = await axiosInstance.post('/create-photos-only-job', { fileTypes });
     return res.data;
-  },
+  },*/
 
   // 2. Create Job (For Audit)
   createAuditJob: async (url: string): Promise<JobCreateResponse> => {
@@ -161,15 +161,50 @@ export const api = {
     return res.data;
   },
 
-  // 8. User Profile
-  getUserProfile: async (): Promise<{ name: string; email: string; plan: string; credits: number }> => {
-    const res = await axiosInstance.get('/user/profile');
+  // UPDATE THIS METHOD:
+  getUserProfile: async (userId: string): Promise<{ credits: number; plan: string }> => {
+    const res = await axiosInstance.get(`/user-profile/${userId}`);
     return res.data;
   },
 
   // 9. Update User Profile
   updateUserProfile: async (data: { name?: string; preferences?: Record<string, unknown> }): Promise<void> => {
     await axiosInstance.patch('/user/profile', data);
+  },
+
+  // 1. Save Brand DNA
+  saveBrandDNA: async (userId: string, dna: any) => {
+    return axiosInstance.post('/brand-dna', { userId, dna });
+  },
+
+  // 2. Get Brand DNA
+  getBrandDNA: async (userId: string) => {
+    const res = await axiosInstance.get(`/brand-dna/${userId}`);
+    return res.data;
+  },
+
+  // 3. Get User Missions
+  getUserMissions: async (userId: string) => {
+    const res = await axiosInstance.get(`/user-jobs/${userId}`);
+    return res.data.jobs;
+  },
+  
+  // UPDATE: Pass userId when creating jobs
+  createPhotoJob: async (fileTypes: string[], userId?: string) => {
+    const res = await axiosInstance.post('/create-photos-only-job', { fileTypes, userId });
+    return res.data;
+  },
+  
+  // 1. Create Cashfree Order
+  createCashfreeOrder: async (userId: string, email?: string): Promise<{payment_session_id: string, order_id: string}> => {
+    const res = await axiosInstance.post('/create-cashfree-order', { userId, email });
+    return res.data;
+  },
+
+  // 2. Verify Cashfree Payment
+  verifyCashfreeOrder: async (orderId: string, userId: string): Promise<{status: string}> => {
+    const res = await axiosInstance.post('/verify-cashfree-payment', { orderId, userId });
+    return res.data;
   },
 };
 

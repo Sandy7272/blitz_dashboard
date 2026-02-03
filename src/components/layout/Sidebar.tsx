@@ -28,10 +28,10 @@ const menuItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Mission Control", path: "/" , tooltip: "Overview of your account and stats" },
   { icon: Zap, label: "Deploy Agent", path: "/deploy", tooltip: "Deploy your AI agents" },
   { icon: Fingerprint, label: "Brand DNA", path: "/brand-dna", tooltip: "Manage your brand identity" },
-  { icon: Library, label: "Asset Factory", path: "/assets", tooltip: "Create and manage your assets" },
-  { icon: Hexagon, label: "MetaShop 3D", path: "/3d-studio", tooltip: "Create 3D models and scenes" },
-  { icon: Wand2, label: "Workspace", path: "/workspace", tooltip: "Create and enhance images with AI" },
-  { icon: History, label: "History", path: "/history", tooltip: "View all your previously generated images" },
+  //{ icon: Library, label: "Asset Factory", path: "/assets", tooltip: "Create and manage your assets" },
+  //{ icon: Hexagon, label: "MetaShop 3D", path: "/3d-studio", tooltip: "Create 3D models and scenes" },
+  //{ icon: Wand2, label: "Workspace", path: "/workspace", tooltip: "Create and enhance images with AI" },
+  //{ icon: History, label: "History", path: "/history", tooltip: "View all your previously generated images" },
   { icon: CreditCard, label: "Billing", path: "/billing", tooltip: "Manage your subscription and buy credits" },
   { icon: User, label: "Profile", path: "/profile", tooltip: "Update your account settings" },
 ];
@@ -62,7 +62,7 @@ export function Sidebar() {
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <span className="font-display font-bold text-black text-xl">B</span>
           </div>
-          <span className="font-display font-bold text-xl tracking-tight">Blitz Agent</span>
+          <span className="font-display font-bold text-xl tracking-tight">⚡️ Blitz Agent</span>
         </div>
 
         <nav className="space-y-2">
@@ -108,13 +108,7 @@ export function Sidebar() {
           </div>
         )}
 
-        <Link 
-          to="/settings" 
-          className="flex items-center gap-3 px-4 py-3 text-muted-foreground hover:text-foreground transition-colors rounded-xl hover:bg-muted"
-        >
-          <Settings className="w-5 h-5" />
-          Settings
-        </Link>
+        
 
         {isAuthenticated && (
           <button 

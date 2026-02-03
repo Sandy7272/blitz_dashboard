@@ -135,7 +135,7 @@ export default function Profile() {
             </div>
           </motion.div>
 
-          {/* Plan Info */}
+          {/* Plan Info 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -161,7 +161,7 @@ export default function Profile() {
                 Manage Plan
               </button>
             </div>
-          </motion.div>
+          </motion.div> */}
 
           {/* Language Selector */}
           <motion.div

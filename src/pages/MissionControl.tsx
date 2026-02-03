@@ -1,8 +1,27 @@
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Terminal, TrendingUp, CheckCircle2, Clock, Loader2, AlertCircle, Eye, Copy } from "lucide-react";
+import { 
+  Terminal, 
+  TrendingUp, 
+  CheckCircle2, 
+  Clock, 
+  Loader2, 
+  AlertCircle, 
+  Eye, 
+  Copy, 
+  Download, 
+  Image as ImageIcon 
+} from "lucide-react";
 import { api } from "@/lib/api";
 import { Link } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
+import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+interface MissionResult {
+  format: string;
+  url: string;
+}
 
 interface Mission {
   id: string;
@@ -11,85 +30,110 @@ interface Mission {
   timestamp: number;
   thumbnail?: string;
   resultUrl?: string;
-  // New Field for Agent Copy - can be object or string from API
-  socialCopy?: {
-    headline: string;
-    caption: string;
-    hashtags: string[];
-  } | string;
+  allResults?: MissionResult[]; 
+  // socialCopy can be a single object (legacy) or a dictionary of platforms (new)
+  socialCopy?: any; 
 }
 
 // Map backend statuses to UI states
 const STATUS_MAP: Record<string, { label: string, color: string, icon: any, done: boolean }> = {
-  // Active States
   'pending_upload': { label: 'Initializing', color: 'text-blue-500', icon: Loader2, done: false },
   'processing': { label: 'Thinking', color: 'text-purple-500', icon: Loader2, done: false },
   'processing_magic': { label: 'Designing', color: 'text-purple-500', icon: Loader2, done: false },
   'generating_photos': { label: 'Rendering', color: 'text-purple-500', icon: Loader2, done: false },
-  'processing_campaign': { label: 'Strategizing', color: 'text-pink-500', icon: Loader2, done: false }, // New state for campaign agent
-  
-  // Completed States (Assets Ready)
+  'processing_campaign': { label: 'Strategizing', color: 'text-pink-500', icon: Loader2, done: false },
   'completed': { label: 'Deployed', color: 'text-green-500', icon: CheckCircle2, done: true },
   'pending_details': { label: 'Ready for Review', color: 'text-green-400', icon: CheckCircle2, done: true },
-  
-  // Failed
   'failed': { label: 'Failed', color: 'text-red-500', icon: AlertCircle, done: true },
 };
 
 export default function MissionControl() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [activeLog, setActiveLog] = useState("System Idle. Waiting for instructions...");
+  const { user } = useAuth0();
+
+  // Helper to force download image
+  const handleDownload = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Download started");
+    } catch (e) {
+      console.error(e);
+      window.open(url, '_blank'); // Fallback
+    }
+  };
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("active_missions") || "[]");
-    setMissions(saved);
-  }, []);
+    if (!user?.sub) return;
 
-  useEffect(() => {
-    if (missions.length === 0) return;
-
-    const interval = setInterval(async () => {
-      const updatedMissions = await Promise.all(missions.map(async (m) => {
-        // Stop polling if we already marked it as done in local state (optional optimization)
-        // But we keep polling 'pending_details' just in case backend updates further.
-        if (m.status === 'failed') return m;
-
-        try {
-          const data = await api.getJobStatus(m.id);
-          const backendStatus = data.status || 'processing';
+    const fetchMissions = async () => {
+      try {
+        const jobs = await api.getUserMissions(user.sub);
+        
+        const updatedMissions = jobs.map((job: any) => {
+          // Normalize results: if all_results exists, use it. Else fallback to single result_url
+          let finalResults: MissionResult[] = [];
           
-          // Terminal Logic
-          if (backendStatus === "generating_photos" || backendStatus === "processing_campaign") {
-            setActiveLog(`[Agent ${m.id.substring(0,4)}] Drafting content for "${m.brief}"...`);
-          } else if (backendStatus === "pending_details" || backendStatus === "completed") {
-            setActiveLog(`[Agent ${m.id.substring(0,4)}] Mission Successful. Assets deployed.`);
+          if (job.all_results && job.all_results.length > 0) {
+            finalResults = job.all_results;
+          } else if (job.result_url) {
+            finalResults = [{ format: 'default', url: job.result_url }];
+          } else if (job.result_urls) {
+             finalResults = job.result_urls.map((u: string, i: number) => ({ format: `Image ${i+1}`, url: u }));
           }
 
-          // Extract Result URL (Handle multiple formats)
-          let resultUrl = m.resultUrl;
-          if (data.result_urls && data.result_urls.length > 0) resultUrl = data.result_urls[0];
-          else if (data.result_url) resultUrl = data.result_url;
-          // Fallback for 'pending_details' photo array
-          else if (data.photo_urls && data.photo_urls.length > 0) resultUrl = data.photo_urls[0];
-          else if (data.clean_photo_urls && data.clean_photo_urls.length > 0) resultUrl = data.clean_photo_urls[0];
+          return { 
+            id: job.id, 
+            brief: job.brief,
+            status: job.status, 
+            timestamp: new Date(job.created_at).getTime(),
+            allResults: finalResults,
+            socialCopy: job.social_copy 
+          };
+        });
 
-          // Extract Social Copy (New)
-          const socialCopy = data.social_copy;
-
-          return { ...m, status: backendStatus, resultUrl, socialCopy };
-        } catch (e) {
-          return m;
+        // --- NEW: UPDATE TERMINAL LOG ---
+        // 1. Find the first job that is NOT done (processing)
+        const activeJob = updatedMissions.find((m: Mission) => !STATUS_MAP[m.status]?.done);
+        
+        if (activeJob) {
+            // If we have an active job, show what it's doing
+            const action = STATUS_MAP[activeJob.status]?.label || "Processing";
+            setActiveLog(`[Agent ${activeJob.id.substring(0,4)}] ${action}: "${activeJob.brief.substring(0, 30)}..."`);
+        } else if (updatedMissions.length > 0) {
+            // If no active jobs, show the result of the last completed job
+            const lastJob = updatedMissions[0];
+            if (lastJob.status === 'completed') {
+                setActiveLog(`[System] Mission Complete: "${lastJob.brief.substring(0, 30)}..." deployed.`);
+            } else {
+                setActiveLog(`[System] Last status: ${lastJob.status}`);
+            }
+        } else {
+            setActiveLog("System Idle. Waiting for instructions...");
         }
-      }));
+        // --------------------------------
 
-      if (JSON.stringify(updatedMissions) !== JSON.stringify(missions)) {
-        setMissions(updatedMissions);
-        localStorage.setItem("active_missions", JSON.stringify(updatedMissions));
+        // Simple check to avoid unnecessary re-renders
+        if (JSON.stringify(updatedMissions) !== JSON.stringify(missions)) {
+          setMissions(updatedMissions);
+        }
+      } catch (e) {
+        console.error("Poll failed", e);
       }
-    }, 3000);
+    };
 
+    fetchMissions();
+    const interval = setInterval(fetchMissions, 5000);
     return () => clearInterval(interval);
-  }, [missions]);
+  }, [user, missions]);
 
   return (
     <DashboardLayout>
@@ -123,7 +167,6 @@ export default function MissionControl() {
               <p className="text-muted-foreground text-sm text-center py-8">No active agents. Deploy one to start.</p>
             ) : (
               missions.map((m) => {
-                // Determine UI state from map or fallback
                 const uiState = STATUS_MAP[m.status] || { label: m.status, color: 'text-blue-500', icon: Loader2, done: false };
                 const Icon = uiState.icon;
 
@@ -148,57 +191,96 @@ export default function MissionControl() {
                       </div>
                     </div>
 
-                    {/* Result Row (Only if done and has data) */}
-                    {uiState.done && m.resultUrl && (
-                      <div className="border-t border-white/5 p-4 bg-black/20 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Left: Image Asset */}
-                        <div className="relative aspect-square md:aspect-video rounded-lg overflow-hidden bg-black group-hover:shadow-glow transition-all">
-                          <img src={m.resultUrl} alt="Result" className="w-full h-full object-cover" />
-                          <a 
-                            href={m.resultUrl} 
-                            target="_blank" 
-                            rel="noreferrer"
-                            className="absolute bottom-2 right-2 bg-black/60 p-2 rounded-full hover:bg-primary hover:text-black text-white transition-colors"
-                          >
-                            <Eye className="w-4 h-4"/>
-                          </a>
+                    {/* Result Row */}
+                    {uiState.done && m.allResults && m.allResults.length > 0 && (
+                      <div className="border-t border-white/5 p-4 bg-black/20 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        {/* LEFT: ASSET GALLERY */}
+                        <div className="space-y-4">
+                           <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-primary tracking-wider flex items-center gap-2">
+                                <ImageIcon className="w-3 h-3"/> GENERATED ASSETS ({m.allResults.length})
+                              </span>
+                           </div>
+                           
+                           {/* Main Preview (First Image) */}
+                           <div className="relative aspect-video rounded-lg overflow-hidden bg-black group-hover:shadow-glow transition-all border border-white/10">
+                              <img src={m.allResults[0].url} alt="Result" className="w-full h-full object-contain" />
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/80 p-2 flex items-center justify-between backdrop-blur-md">
+                                 <span className="text-xs font-mono text-white capitalize">{m.allResults[0].format.replace(/_/g, " ")}</span>
+                                 <div className="flex gap-2">
+                                   <a href={m.allResults[0].url} target="_blank" rel="noreferrer" className="p-1.5 hover:bg-white/20 rounded-md transition-colors text-white"><Eye className="w-3 h-3"/></a>
+                                   <button onClick={() => handleDownload(m.allResults![0].url, `blitz_${m.id}_${m.allResults![0].format}.jpg`)} className="p-1.5 hover:bg-white/20 rounded-md transition-colors text-white"><Download className="w-3 h-3"/></button>
+                                 </div>
+                              </div>
+                           </div>
+
+                           {/* Thumbnails Grid (If > 1 image) */}
+                           {m.allResults.length > 1 && (
+                             <div className="grid grid-cols-3 gap-2">
+                               {m.allResults.slice(1).map((res, idx) => (
+                                 <div key={idx} className="relative aspect-square rounded-md overflow-hidden border border-white/10 bg-black/40 group/thumb">
+                                    <img src={res.url} className="w-full h-full object-cover opacity-70 group-hover/thumb:opacity-100 transition-opacity" />
+                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+                                       <a href={res.url} target="_blank" rel="noreferrer" className="text-white hover:text-primary"><Eye className="w-4 h-4"/></a>
+                                       <button onClick={() => handleDownload(res.url, `blitz_${m.id}_${res.format}.jpg`)} className="text-white hover:text-primary"><Download className="w-4 h-4"/></button>
+                                    </div>
+                                    <div className="absolute bottom-0 w-full bg-black/80 text-[10px] text-center py-1 text-gray-300 truncate px-1">
+                                      {res.format.replace("instagram_", "")}
+                                    </div>
+                                 </div>
+                               ))}
+                             </div>
+                           )}
                         </div>
 
-                        {/* Right: Agent Copy */}
+                        {/* RIGHT: AGENT COPY (MULTI-PLATFORM) */}
                         <div className="flex flex-col h-full">
                           {m.socialCopy ? (
-                             <div className="space-y-2 flex-1 flex flex-col">
-                               <div className="flex justify-between items-center">
-                                 <span className="text-xs font-bold text-primary tracking-wider">GENERATED CAPTION</span>
-                                 <button 
-                                   onClick={() => {
-                                     const copy = m.socialCopy;
-                                     if (typeof copy === 'string') {
-                                       navigator.clipboard.writeText(copy);
-                                     } else if (copy) {
-                                       navigator.clipboard.writeText(`${copy.headline}\n\n${copy.caption}\n\n${copy.hashtags.join(' ')}`);
-                                     }
-                                   }}
-                                   className="text-xs flex items-center gap-1 hover:text-white text-muted-foreground transition-colors"
-                                 >
-                                   <Copy className="w-3 h-3" /> Copy
-                                 </button>
+                             <Tabs defaultValue="instagram" className="w-full flex-1 flex flex-col">
+                               <div className="flex justify-between items-center mb-2">
+                                 <span className="text-xs font-bold text-primary tracking-wider">GENERATED COPY</span>
+                                 <TabsList className="bg-black/40 h-8 p-0 border border-white/10">
+                                   <TabsTrigger value="instagram" className="text-xs h-full px-3 data-[state=active]:bg-primary/20 data-[state=active]:text-primary">IG</TabsTrigger>
+                                   <TabsTrigger value="twitter" className="text-xs h-full px-3 data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400">X</TabsTrigger>
+                                   <TabsTrigger value="linkedin" className="text-xs h-full px-3 data-[state=active]:bg-blue-700/20 data-[state=active]:text-blue-300">LI</TabsTrigger>
+                                 </TabsList>
                                </div>
-                               <div className="p-3 bg-white/5 rounded-lg text-xs text-muted-foreground font-mono flex-1 overflow-y-auto border border-white/5">
-                                 {typeof m.socialCopy === 'string' ? (
-                                   <p className="leading-relaxed whitespace-pre-wrap">{m.socialCopy}</p>
-                                 ) : m.socialCopy ? (
-                                   <>
-                                     <p className="font-bold text-white mb-2">{m.socialCopy.headline}</p>
-                                     <p className="mb-3 leading-relaxed">{m.socialCopy.caption}</p>
-                                     <p className="text-blue-400">{m.socialCopy.hashtags.join(' ')}</p>
-                                   </>
-                                 ) : null}
-                               </div>
-                             </div>
+                               
+                               {/* Loop through platforms to create content panes */}
+                               {['instagram', 'twitter', 'linkedin'].map((plat) => {
+                                  // Robustly handle if the copy is string (legacy) or dict (new)
+                                  const content = (typeof m.socialCopy === 'object' && m.socialCopy[plat]) 
+                                    ? m.socialCopy[plat] 
+                                    : (plat === 'instagram' ? m.socialCopy : null);
+
+                                  if (!content) return <TabsContent key={plat} value={plat} className="text-xs text-muted-foreground flex-1">No content generated.</TabsContent>;
+
+                                  return (
+                                    <TabsContent key={plat} value={plat} className="flex-1 mt-0 h-full">
+                                       <div className="relative bg-white/5 rounded-lg border border-white/5 h-[300px] flex flex-col">
+                                          <div className="p-4 overflow-y-auto flex-1 font-mono text-xs text-gray-300 space-y-3 custom-scrollbar">
+                                             {content.headline && <p className="font-bold text-white text-sm">{content.headline}</p>}
+                                             <p className="whitespace-pre-wrap leading-relaxed">{content.caption}</p>
+                                             {content.hashtags && <p className="text-blue-400">{Array.isArray(content.hashtags) ? content.hashtags.join(' ') : content.hashtags}</p>}
+                                          </div>
+                                          <button 
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(`${content.headline || ''}\n\n${content.caption}\n\n${Array.isArray(content.hashtags) ? content.hashtags.join(' ') : content.hashtags || ''}`);
+                                                toast.success(`Copied ${plat} text!`);
+                                            }}
+                                            className="w-full py-3 bg-white/5 hover:bg-white/10 text-xs text-center border-t border-white/5 transition-colors flex items-center justify-center gap-2 font-medium"
+                                          >
+                                            <Copy className="w-3 h-3" /> Copy for {plat.charAt(0).toUpperCase() + plat.slice(1)}
+                                          </button>
+                                       </div>
+                                    </TabsContent>
+                                  );
+                               })}
+                             </Tabs>
                           ) : (
-                             <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground bg-white/5 rounded-lg border border-dashed border-white/10">
-                               <span>Generating caption...</span>
+                             <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground bg-white/5 rounded-lg border border-dashed border-white/10 h-full min-h-[300px]">
+                               <span>Generating copy...</span>
                              </div>
                           )}
                         </div>
@@ -217,7 +299,7 @@ export default function MissionControl() {
             <TrendingUp className="text-primary" /> Viral Forecast
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {["Minimalist Luxury", "Y2K Cyber", "Eco-Green"].map((trend, i) => (
+            {["Coming Soon"].map((trend, i) => (
               <div key={i} className="glass-card p-0 overflow-hidden cursor-pointer group opacity-75 hover:opacity-100 transition-opacity">
                 <div className="h-24 bg-gradient-to-br from-gray-800 to-black relative p-4 flex flex-col justify-between border-l-4 border-l-primary">
                    <span className="font-bold text-white">{trend}</span>
