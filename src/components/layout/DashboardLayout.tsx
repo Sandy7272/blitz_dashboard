@@ -2,6 +2,7 @@ import { Sidebar } from "./Sidebar";
 import { MobileHeader } from "./MobileHeader";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
+import { AppTour } from "@/components/onboarding/AppTour";
 import { motion } from "framer-motion";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useAuthApiSetup } from "@/hooks/useAuthApiSetup";
@@ -12,7 +13,7 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { showWelcome, completeOnboarding } = useOnboarding();
+  const { showWelcome, completeOnboarding, showTour, completeTour, skipTour } = useOnboarding();
   
   // Set up auth token injection for API calls
   useAuthApiSetup();
@@ -21,7 +22,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <TooltipProvider>
       <div className="min-h-screen bg-background gradient-radial">
         {/* Welcome Modal for first-time users */}
-        <WelcomeModal isOpen={showWelcome} onClose={completeOnboarding} />
+        <WelcomeModal
+          isOpen={showWelcome}
+          onClose={() => completeOnboarding(true)}
+          onStartTour={() => completeOnboarding(true)}
+          onSkipTour={() => {
+            completeOnboarding(false);
+            skipTour();
+          }}
+        />
+        <AppTour isOpen={showTour} onFinish={completeTour} onSkip={completeTour} />
         
         {/* Desktop Sidebar */}
         <Sidebar />

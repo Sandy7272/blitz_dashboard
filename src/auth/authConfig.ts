@@ -10,7 +10,11 @@ export const authConfig = {
   redirectUri: window.location.origin,
   
   // Auth0 SDK options
-  cacheLocation: 'memory' as const, // More secure than localStorage
+  // Persist sessions across refreshes.
+  // Set VITE_AUTH0_CACHE_LOCATION=memory to opt out.
+  cacheLocation: (import.meta.env.VITE_AUTH0_CACHE_LOCATION === 'memory'
+    ? 'memory'
+    : 'localstorage') as const,
   useRefreshTokens: true, // Enable silent refresh
   
   // Scopes for API access

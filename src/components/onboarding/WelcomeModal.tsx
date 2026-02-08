@@ -1,10 +1,12 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Upload, Wand2, Download, Zap, ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
 
 interface WelcomeModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onStartTour?: () => void;
+  onSkipTour?: () => void;
 }
 
 const steps = [
@@ -25,7 +27,37 @@ const steps = [
   },
 ];
 
-export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
+export function WelcomeModal({ isOpen, onClose, onStartTour, onSkipTour }: WelcomeModalProps) {
+  const [name, setName] = useState("");
+  const [country, setCountry] = useState("");
+  const [error, setError] = useState("");
+
+  const saveProfile = () => {
+    if (!country) {
+      setError("Country is required to show the right payment options.");
+      return false;
+    }
+    setError("");
+    try {
+      localStorage.setItem(
+        "blitz_user_profile",
+        JSON.stringify({ name: name.trim(), country })
+      );
+    } catch {
+      // Ignore storage failures and still proceed
+    }
+    return true;
+  };
+
+  const handleStartTour = () => {
+    if (!saveProfile()) return;
+    (onStartTour || onClose)();
+  };
+
+  const handleSkipTour = () => {
+    if (!saveProfile()) return;
+    (onSkipTour || onClose)();
+  };
   return (
     <AnimatePresence>
       {isOpen && (
@@ -90,21 +122,53 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
               ))}
             </div>
 
+            {/* Onboarding Details */}
+            <div className="space-y-3 mb-6">
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Name (optional)</label>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Mukul"
+                  className="input-glass w-full"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Country (required)</label>
+                <select
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className="input-glass w-full"
+                >
+                  <option value="">Select country</option>
+                  <option value="India">India</option>
+                  <option value="United States">United States</option>
+                  <option value="United Kingdom">United Kingdom</option>
+                  <option value="Canada">Canada</option>
+                  <option value="Australia">Australia</option>
+                  <option value="Other">Other</option>
+                </select>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Country is required to show the right payment options (e.g., UPI in India).
+                </p>
+                {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
+              </div>
+            </div>
+
             {/* CTA */}
             <div className="flex flex-col sm:flex-row gap-3">
-              <Link
-                to="/workspace?type=apparel"
-                onClick={onClose}
+              <button
+                onClick={handleStartTour}
                 className="btn-primary flex-1 flex items-center justify-center gap-2"
               >
-                Start Creating
+                Take Quick Tour
                 <ArrowRight className="w-4 h-4" />
-              </Link>
+              </button>
               <button
-                onClick={onClose}
+                onClick={handleSkipTour}
                 className="btn-secondary flex-1"
               >
-                Explore First
+                Skip Tour
               </button>
             </div>
 

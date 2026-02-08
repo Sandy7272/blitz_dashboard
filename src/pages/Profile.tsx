@@ -1,9 +1,11 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { motion } from "framer-motion";
 import { User, Mail, Globe, LogOut, Camera, Shield, Bell } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 const languages = [
   { code: "en", name: "English" },
@@ -14,6 +16,11 @@ const languages = [
 export default function Profile() {
   const { user, logout, isAuthenticated } = useAuth();
   const [language, setLanguage] = useState("en");
+  const [shopifyStatus, setShopifyStatus] = useState<{
+    loading: boolean;
+    connected: boolean;
+    shop?: string;
+  }>({ loading: true, connected: false });
 
   const handleLogout = () => {
     logout({ returnTo: window.location.origin });
@@ -29,6 +36,49 @@ export default function Profile() {
       .toUpperCase()
       .slice(0, 2);
   };
+
+  const connectShopify = async () => {
+    const shop = prompt("Enter your shop URL (e.g. my-store.myshopify.com)");
+    if (!shop || !user?.sub) return;
+
+    try {
+      const authUrl = await api.getShopifyConnectUrl(shop, user.sub);
+      if (!authUrl) {
+        toast.error("Could not start Shopify connect. Try again.");
+        return;
+      }
+      toast.info("Redirecting to Shopify...");
+      window.location.assign(authUrl);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to start Shopify connect.");
+    }
+  };
+
+  useEffect(() => {
+    if (!user?.sub) return;
+    let mounted = true;
+
+    const loadProfile = async () => {
+      try {
+        const profile = await api.getUserProfile(user.sub);
+        if (!mounted) return;
+        setShopifyStatus({
+          loading: false,
+          connected: Boolean(profile.shopify_connected),
+          shop: profile.shopify_shop || undefined,
+        });
+      } catch (e) {
+        if (!mounted) return;
+        setShopifyStatus({ loading: false, connected: false });
+      }
+    };
+
+    loadProfile();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.sub]);
 
   return (
     <DashboardLayout>
@@ -228,6 +278,42 @@ export default function Profile() {
               </label>
             </div>
           </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="glass-card p-6"
+          >
+            {shopifyStatus.loading ? (
+              <div className="text-sm text-muted-foreground">Checking Shopify connection...</div>
+            ) : shopifyStatus.connected ? (
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Shopify connected</p>
+                  {shopifyStatus.shop && (
+                    <p className="text-xs text-muted-foreground">
+                      {shopifyStatus.shop}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={connectShopify}
+                  className="btn-secondary flex items-center gap-2"
+                >
+                  Reconnect
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={connectShopify}
+                className="btn-secondary flex items-center gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+              >
+                Connect Shopify Store
+              </button>
+            )}
+          </motion.div>
+          
 
           {/* Session Info */}
           <motion.div

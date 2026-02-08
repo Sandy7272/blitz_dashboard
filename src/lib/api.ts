@@ -85,6 +85,13 @@ export interface JobStatusResponse {
   result_url?: string;
   photo_urls?: string[];
   clean_photo_urls?: string[];
+  clean_studio_photo_url?: string;
+  clean_lifestyle_photo_urls?: string[];
+  clean_collage_url?: string;
+  listing_title?: string;
+  listing_description?: string;
+  listing_features?: string[];
+  assets_zip_url?: string;
   social_copy?: {
     headline: string;
     caption: string;
@@ -106,6 +113,13 @@ export interface BrandAnalysis {
   voice: string;
   colors: string[] | { primary: string; secondary: string };
   instagram_style: string;
+}
+
+export interface UserProfile {
+  credits: number;
+  plan: string;
+  shopify_connected?: boolean;
+  shopify_shop?: string;
 }
 
 // API methods with proper typing
@@ -162,7 +176,7 @@ export const api = {
   },
 
   // UPDATE THIS METHOD:
-  getUserProfile: async (userId: string): Promise<{ credits: number; plan: string }> => {
+  getUserProfile: async (userId: string): Promise<UserProfile> => {
     const res = await axiosInstance.get(`/user-profile/${userId}`);
     return res.data;
   },
@@ -170,6 +184,38 @@ export const api = {
   // 9. Update User Profile
   updateUserProfile: async (data: { name?: string; preferences?: Record<string, unknown> }): Promise<void> => {
     await axiosInstance.patch('/user/profile', data);
+  },
+
+  // Shopify Connect - get authorization URL
+  getShopifyConnectUrl: async (shop: string, userId: string): Promise<string> => {
+    const res = await axiosInstance.get('/shopify/connect', {
+      params: { shop, user_id: userId },
+    });
+    const data: any = res.data;
+
+    if (typeof data === 'string') {
+      const trimmed = data.trim();
+      const match = trimmed.match(/https?:\/\/[^\s"'<>]+/);
+      return match ? match[0] : trimmed;
+    }
+
+    return (
+      data?.redirect_url ||
+      data?.redirectUrl ||
+      data?.url ||
+      data?.auth_url ||
+      data?.authUrl ||
+      data?.authorization_url ||
+      ''
+    );
+  },
+
+  // Shopify Products - list products for picker
+  getShopifyProducts: async (userId: string): Promise<Array<{ id: string; title: string }>> => {
+    const res = await axiosInstance.get('/shopify/products', {
+      params: { user_id: userId },
+    });
+    return res.data?.products || [];
   },
 
   // 1. Save Brand DNA
@@ -204,6 +250,21 @@ export const api = {
   // 2. Verify Cashfree Payment
   verifyCashfreeOrder: async (orderId: string, userId: string): Promise<{status: string}> => {
     const res = await axiosInstance.post('/verify-cashfree-payment', { orderId, userId });
+    return res.data;
+  },
+
+  /** * Generic POST method for ad-hoc requests 
+   * Used for: /api/claim-job, /api/agent/command, etc.
+   */
+  post: async <T = any>(endpoint: string, data?: any): Promise<T> => {
+    const res = await axiosInstance.post(endpoint, data);
+    return res.data;
+  },
+
+  /** * Generic GET method 
+   */
+  get: async <T = any>(endpoint: string): Promise<T> => {
+    const res = await axiosInstance.get(endpoint);
     return res.data;
   },
 };

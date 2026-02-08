@@ -33,6 +33,8 @@ interface Mission {
   allResults?: MissionResult[]; 
   // socialCopy can be a single object (legacy) or a dictionary of platforms (new)
   socialCopy?: any; 
+  tier?: string;
+  mode?: string;
 }
 
 // Map backend statuses to UI states
@@ -45,6 +47,22 @@ const STATUS_MAP: Record<string, { label: string, color: string, icon: any, done
   'completed': { label: 'Deployed', color: 'text-green-500', icon: CheckCircle2, done: true },
   'pending_details': { label: 'Ready for Review', color: 'text-green-400', icon: CheckCircle2, done: true },
   'failed': { label: 'Failed', color: 'text-red-500', icon: AlertCircle, done: true },
+};
+
+const getBadge = (m: Mission) => {
+  if (m.mode === "custom_campaign") {
+    return { label: "Campaign", className: "bg-pink-500/10 text-pink-400 border border-pink-500/30" };
+  }
+  if (m.tier === "photos" || m.mode === "listing_kit") {
+    return { label: "Listing Kit", className: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" };
+  }
+  if (m.tier === "3d") {
+    return { label: "3D Scan", className: "bg-blue-500/10 text-blue-400 border border-blue-500/30" };
+  }
+  if (m.tier === "audit" || m.mode === "website_audit") {
+    return { label: "Audit", className: "bg-purple-500/10 text-purple-400 border border-purple-500/30" };
+  }
+  return null;
 };
 
 export default function MissionControl() {
@@ -96,7 +114,9 @@ export default function MissionControl() {
             status: job.status, 
             timestamp: new Date(job.created_at).getTime(),
             allResults: finalResults,
-            socialCopy: job.social_copy 
+            socialCopy: job.social_copy,
+            tier: job.tier,
+            mode: job.mode
           };
         });
 
@@ -185,9 +205,17 @@ export default function MissionControl() {
                           </div>
                       </div>
                       <div className="flex items-center gap-2">
-                         <span className={`text-xs px-2 py-1 rounded uppercase font-bold bg-white/5 ${uiState.color}`}>
-                           {uiState.label}
-                         </span>
+                        {(() => {
+                          const badge = getBadge(m);
+                          return badge ? (
+                            <span className={`text-[10px] px-2 py-1 rounded uppercase font-bold ${badge.className}`}>
+                              {badge.label}
+                            </span>
+                          ) : null;
+                        })()}
+                        <span className={`text-xs px-2 py-1 rounded uppercase font-bold bg-white/5 ${uiState.color}`}>
+                          {uiState.label}
+                        </span>
                       </div>
                     </div>
 

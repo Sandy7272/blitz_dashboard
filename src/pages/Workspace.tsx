@@ -19,6 +19,7 @@ import { HintTooltip } from "@/components/onboarding/HintTooltip";
 import { FeatureTooltip } from "@/components/onboarding/FeatureTooltip";
 import { api } from "@/lib/api"; // Ensure this import exists
 import { toast } from "sonner";
+import { useAuth0 } from "@auth0/auth0-react";
 
 const workflowTypes = {
   apparel: {
@@ -63,6 +64,7 @@ export default function Workspace() {
   const [searchParams] = useSearchParams();
   const type = (searchParams.get("type") as keyof typeof workflowTypes) || "apparel";
   const workflow = workflowTypes[type];
+  const { user } = useAuth0();
 
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -76,6 +78,7 @@ export default function Workspace() {
   const [result, setResult] = useState<string | null>(null); // The currently selected image
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [showComparison, setShowComparison] = useState(false);
+  const [showCreditModal, setShowCreditModal] = useState(false);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -118,6 +121,10 @@ export default function Workspace() {
           }
           
           toast.success("Generation complete!");
+        } else if (data.status === "failed_credits") {
+          clearInterval(interval);
+          setIsGenerating(false);
+          setShowCreditModal(true);
         } else if (data.status === "failed") {
           clearInterval(interval);
           setIsGenerating(false);
@@ -142,7 +149,7 @@ export default function Workspace() {
         jobId = data.jobId;
         setProgress(20);
       } else if (file) {
-        const jobData = await api.createPhotoJob([file.type]);
+        const jobData = await api.createPhotoJob([file.type], user?.sub);
         jobId = jobData.jobId;
         const uploadUrl = jobData.uploadUrls[0].url;
         setProgress(15);
@@ -180,6 +187,30 @@ export default function Workspace() {
 
   return (
     <DashboardLayout>
+      {showCreditModal && (
+        <div className="fixed inset-0 z-[120] bg-black/60 flex items-center justify-center p-4">
+          <div className="glass-card p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold mb-2">Insufficient Credits</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              You don’t have enough credits to run this workflow. Add credits to continue.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => window.location.assign("/billing")}
+                className="btn-primary flex-1"
+              >
+                Add Credits
+              </button>
+              <button
+                onClick={() => setShowCreditModal(false)}
+                className="btn-secondary flex-1"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="max-w-6xl mx-auto">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <p className="text-sm text-primary font-medium mb-1">{workflow.subtitle}</p>

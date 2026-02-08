@@ -36,6 +36,12 @@ const menuItems: NavItem[] = [
   { icon: User, label: "Profile", path: "/profile", tooltip: "Update your account settings" },
 ];
 
+const toTourId = (label: string) =>
+  label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
 export function Sidebar() {
   const location = useLocation();
   const { user, logout, isAuthenticated } = useAuth();
@@ -72,6 +78,7 @@ export function Sidebar() {
               <Link
                 key={item.path}
                 to={item.path}
+                data-tour-id={toTourId(item.label)}
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
                   isActive 

@@ -6,7 +6,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Zap, Loader2 } from 'lucide-react';
-import { useAuth } from './useAuth';
+import { useAuth0 } from '@auth0/auth0-react';
 import { isAuthConfigured } from './authConfig';
 
 interface ProtectedRouteProps {
@@ -16,34 +16,27 @@ interface ProtectedRouteProps {
   fallbackPath?: string;
 }
 
-export function ProtectedRoute({
-  children,
-  requiredRole,
-  requiredPermission,
-  fallbackPath = '/login',
-}: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, hasRole, hasPermission } = useAuth();
+export function ProtectedRoute({ children }: ProtectedRouteProps) {
+  // Use the raw hook directly to avoid abstraction bugs
+  const { isAuthenticated, isLoading } = useAuth0(); 
   const location = useLocation();
 
-  // 1. WAIT: If Auth0 is still loading, show a spinner instead of redirecting
+  // 1. WAIT: Show spinner while Auth0 initializes
   if (isLoading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="h-screen w-full flex items-center justify-center bg-black">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
       </div>
     );
   }
 
-  // 2. CHECK: If loading is done and still not authenticated, THEN redirect
+  // 2. CHECK: Only redirect if loading is DONE and user is NOT logged in
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // Save the current location so we can send them back after login
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // 3. ROLE CHECK (Optional): If roles are required
-  if (requiredRole && !hasRole(requiredRole)) {
-    return <Navigate to="/dashboard" replace />; // or an unauthorized page
-  }
-
+  // 3. ALLOW
   return <>{children}</>;
 };
 
