@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/sheet";
 
 const mainNavItems = [
-  { label: "Dashboard", path: "/", icon: "📊" },
+  { label: "Listing Kit", path: "/", icon: "🧩" },
+  { label: "Mission Control", path: "/missions", icon: "📊" },
   { label: "Workspace", path: "/workspace", icon: "✨" },
   { label: "History", path: "/history", icon: "📁" },
   { label: "Billing", path: "/billing", icon: "💳" },

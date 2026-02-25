@@ -46,6 +46,14 @@ const App = () => (
               path="/"
               element={
                 <ProtectedRoute>
+                  <DeployAgent />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/missions"
+              element={
+                <ProtectedRoute>
                   <MissionControl />
                 </ProtectedRoute>
               }

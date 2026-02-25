@@ -15,7 +15,8 @@ import {
   Rocket,
   ImageIcon,
   FileText,
-  Package
+  Package,
+  Plus
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, type JobStatusResponse } from "@/lib/api";
@@ -66,6 +67,7 @@ export default function DeployAgent() {
   const [listingDescription, setListingDescription] = useState("");
   const [listingFeatures, setListingFeatures] = useState<string[]>([]);
   const [listingZipUrl, setListingZipUrl] = useState<string | null>(null);
+  const [listingPushStatus, setListingPushStatus] = useState<"idle" | "pushing" | "pushed" | "failed">("idle");
   const [productId, setProductId] = useState("");
   const [productOptions, setProductOptions] = useState<Array<{ id: string; title: string }>>([]);
   const [productsLoading, setProductsLoading] = useState(false);
@@ -74,6 +76,7 @@ export default function DeployAgent() {
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
   const [shopifyShop, setShopifyShop] = useState<string | null>(null);
+  const [shopifyConnected, setShopifyConnected] = useState(false);
 
   // 3. FETCH DNA FROM API (Replaces localStorage)
   useEffect(() => {
@@ -101,12 +104,31 @@ export default function DeployAgent() {
         const profile = await api.getUserProfile(user.sub);
         setCredits(profile.credits ?? 0);
         setShopifyShop(profile.shopify_shop || null);
+        setShopifyConnected(Boolean(profile.shopify_connected));
       } catch (e) {
         console.error("Failed to load credits", e);
       }
     };
     loadCredits();
   }, [user]);
+
+  const connectShopify = async () => {
+    const shop = prompt("Enter your shop URL (e.g. my-store.myshopify.com)");
+    if (!shop || !user?.sub) return;
+
+    try {
+      const authUrl = await api.getShopifyConnectUrl(shop, user.sub);
+      if (!authUrl) {
+        toast.error("Could not start Shopify connect. Try again.");
+        return;
+      }
+      toast.info("Redirecting to Shopify...");
+      window.location.assign(authUrl);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to start Shopify connect.");
+    }
+  };
 
   // 4. Fetch Shopify products for picker (Listing Kit only)
   useEffect(() => {
@@ -174,6 +196,7 @@ const handleDeployToStore = async () => {
     setListingDescription("");
     setListingFeatures([]);
     setListingZipUrl(null);
+    setListingPushStatus("idle");
     setListingJobId(null);
     setListingStatus("idle");
   };
@@ -243,6 +266,7 @@ const handleDeployToStore = async () => {
       );
 
       setListingStatus("generating");
+      setListingPushStatus("idle");
       await api.startProcessing(jobId, "listing_kit", {});
       pollListingStatus(jobId);
       toast.success("Listing kit started. Generating assets...");
@@ -284,6 +308,7 @@ const handleDeployToStore = async () => {
       }
       const html = buildShopifyHtml(listingDescription, listingFeatures);
       const imageUrls = listingResults;
+      setListingPushStatus("pushing");
       
       await api.post('/start-processing', {
         jobId: listingJobId,
@@ -305,12 +330,15 @@ const handleDeployToStore = async () => {
           if (status.status === "failed_credits") {
             clearInterval(poll);
             setShowCreditModal(true);
+            setListingPushStatus("failed");
           } else if (status.status === "completed" || status.status === "completed_with_warnings") {
             clearInterval(poll);
             toast.success("Listing pushed to Shopify!");
+            setListingPushStatus("pushed");
           } else if (status.status === "failed") {
             clearInterval(poll);
             toast.error("Shopify push failed.");
+            setListingPushStatus("failed");
           }
         } catch (e) {
           console.error(e);
@@ -319,6 +347,7 @@ const handleDeployToStore = async () => {
     } catch (e) {
       console.error(e);
       toast.error("Failed to push listing to Shopify.");
+      setListingPushStatus("failed");
     }
   };
 
@@ -383,7 +412,7 @@ const handleDeployToStore = async () => {
       toast.success("Agent deployed! Monitor progress in Mission Control.");
       
       // Redirect to Mission Control
-      setTimeout(() => navigate("/"), 2000);
+      setTimeout(() => navigate("/missions"), 2000);
 
     } catch (e) {
       console.error(e);
@@ -391,6 +420,28 @@ const handleDeployToStore = async () => {
       setStatus("idle");
     }
   };
+
+  const brandColorList = (() => {
+    if (!brandDNA?.colors) return [];
+    if (Array.isArray(brandDNA.colors)) return brandDNA.colors.slice(0, 5);
+    const obj = brandDNA.colors as Record<string, string>;
+    return Object.values(obj).filter(Boolean).slice(0, 5);
+  })();
+
+  const listingSteps = [
+    {
+      id: "connect",
+      label: "Connect Shopify + Brand DNA",
+      done: shopifyConnected && Boolean(brandDNA?.voice || brandColorList.length),
+    },
+    { id: "upload", label: "Upload product photos", done: listingFiles.length > 0 },
+    { id: "generate", label: "Generate listing kit", done: listingStatus === "ready" },
+    { id: "push", label: "Push to Shopify", done: listingPushStatus === "pushed" },
+  ];
+  const activeStepIndex = Math.max(
+    0,
+    listingSteps.findIndex((step) => !step.done)
+  );
 
   return (
     <DashboardLayout>
@@ -416,12 +467,39 @@ const handleDeployToStore = async () => {
             </div>
           </div>
         )}
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">
-            Current Balance
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="glass-card p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Credits</p>
+              <p className="text-lg font-bold">
+                {credits !== null ? `${credits} Cr` : "—"}
+              </p>
+            </div>
+            <RouterLink
+              to="/billing"
+              className="btn-primary py-2 px-3 flex items-center gap-2 text-xs"
+            >
+              <Plus className="w-4 h-4" /> Add
+            </RouterLink>
           </div>
-          <div className="text-sm font-mono font-bold">
-            {credits !== null ? `${credits} Cr` : "—"}
+          <div className="glass-card p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Shopify</p>
+              {shopifyConnected ? (
+                <p className="text-sm font-medium">Connected</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">Not connected</p>
+              )}
+              {shopifyShop && (
+                <p className="text-[11px] text-muted-foreground">{shopifyShop}</p>
+              )}
+            </div>
+            <button
+              onClick={connectShopify}
+              className={shopifyConnected ? "btn-secondary py-2 px-3 text-xs" : "btn-primary py-2 px-3 text-xs"}
+            >
+              {shopifyConnected ? "Reconnect" : "Connect"}
+            </button>
           </div>
         </div>
         {/* Mode Toggle */}
@@ -556,6 +634,40 @@ const handleDeployToStore = async () => {
                 <p className="text-muted-foreground">Upload multiple product images to generate listing photos and copy.</p>
               </div>
 
+              <div className="glass-card p-5">
+                <div className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Listing Flow</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {listingSteps.map((step, index) => {
+                    const isActive = index === activeStepIndex;
+                    return (
+                      <div
+                        key={step.id}
+                        className={`rounded-xl border px-4 py-3 flex items-center gap-3 ${
+                          step.done
+                            ? "border-primary/40 bg-primary/10 text-white"
+                            : isActive
+                              ? "border-white/20 bg-white/5 text-white"
+                              : "border-white/10 bg-black/20 text-muted-foreground"
+                        }`}
+                      >
+                        <div
+                          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                            step.done
+                              ? "bg-primary text-black"
+                              : isActive
+                                ? "bg-white/20 text-white"
+                                : "bg-white/10 text-muted-foreground"
+                          }`}
+                        >
+                          {index + 1}
+                        </div>
+                        <div className="text-sm font-medium">{step.label}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="glass-card p-6">
                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                   <ImageIcon className="w-5 h-5 text-primary" /> Product Images
@@ -598,6 +710,36 @@ const handleDeployToStore = async () => {
 
             {/* RIGHT COLUMN */}
             <div className="space-y-6">
+              <div className="glass-card p-6">
+                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <BrainCircuit className="w-4 h-4" /> Brand DNA
+                </h3>
+                {brandDNA ? (
+                  <div className="space-y-3">
+                    {brandDNA.voice && (
+                      <p className="text-sm text-muted-foreground">
+                        Voice: <span className="text-white">"{brandDNA.voice.substring(0, 80)}"</span>
+                      </p>
+                    )}
+                    {brandColorList.length > 0 ? (
+                      <div className="flex items-center gap-2">
+                        {brandColorList.map((c, i) => (
+                          <div
+                            key={`${c}-${i}`}
+                            className="w-6 h-6 rounded-full border border-white/20"
+                            style={{ backgroundColor: c }}
+                            title={c}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No brand colors detected.</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No Brand DNA detected yet.</p>
+                )}
+              </div>
               <div className="glass-card p-6">
                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                   <FileText className="w-4 h-4" /> Listing Copy

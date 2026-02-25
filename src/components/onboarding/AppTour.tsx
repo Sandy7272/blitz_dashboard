@@ -11,16 +11,16 @@ type TourStep = {
 
 const STEPS: TourStep[] = [
   {
-    id: "mission-control",
-    title: "Mission Control",
-    description: "See active missions, results, and system status at a glance.",
+    id: "listing-kit",
+    title: "Listing Kit",
+    description: "Generate product listings and push directly to Shopify.",
     path: "/",
   },
   {
-    id: "deploy-agent",
-    title: "Deploy Agent",
-    description: "Launch campaign or listing kits with AI-generated assets.",
-    path: "/deploy",
+    id: "mission-control",
+    title: "Mission Control",
+    description: "See active missions, results, and system status at a glance.",
+    path: "/missions",
   },
   {
     id: "brand-dna",

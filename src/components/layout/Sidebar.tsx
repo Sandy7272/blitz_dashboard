@@ -25,8 +25,8 @@ interface NavItem {
 }
 
 const menuItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Mission Control", path: "/" , tooltip: "Overview of your account and stats" },
-  { icon: Zap, label: "Deploy Agent", path: "/deploy", tooltip: "Deploy your AI agents" },
+  { icon: Zap, label: "Listing Kit", path: "/" , tooltip: "Generate listings and push to Shopify" },
+  { icon: LayoutDashboard, label: "Mission Control", path: "/missions" , tooltip: "Overview of your account and stats" },
   { icon: Fingerprint, label: "Brand DNA", path: "/brand-dna", tooltip: "Manage your brand identity" },
   //{ icon: Library, label: "Asset Factory", path: "/assets", tooltip: "Create and manage your assets" },
   //{ icon: Hexagon, label: "MetaShop 3D", path: "/3d-studio", tooltip: "Create 3D models and scenes" },

@@ -84,7 +84,7 @@ function AccessDenied({ message }: { message: string }) {
         </h2>
         <p className="text-muted-foreground mb-6">{message}</p>
         <a href="/" className="btn-primary inline-block">
-          Go to Dashboard
+          Go to Listing Kit
         </a>
       </motion.div>
     </div>

@@ -1,17 +1,17 @@
 import { 
   LayoutDashboard, 
   Wand2, 
-  History, 
   CreditCard, 
-  User
+  User,
+  Zap
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Home", path: "/" },
+  { icon: Zap, label: "Listing Kit", path: "/" },
+  { icon: LayoutDashboard, label: "Missions", path: "/missions" },
   { icon: Wand2, label: "Create", path: "/workspace" },
-  { icon: History, label: "History", path: "/history" },
   { icon: CreditCard, label: "Billing", path: "/billing" },
   { icon: User, label: "Profile", path: "/profile" },
 ];
