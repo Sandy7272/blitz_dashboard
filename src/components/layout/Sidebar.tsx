@@ -10,7 +10,8 @@ import {
   Zap,
   Fingerprint,
   Hexagon,
-  Library
+  Library,
+  List
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router-dom";
@@ -26,12 +27,9 @@ interface NavItem {
 
 const menuItems: NavItem[] = [
   { icon: Zap, label: "Listing Kit", path: "/" , tooltip: "Generate listings and push to Shopify" },
-  { icon: LayoutDashboard, label: "Mission Control", path: "/missions" , tooltip: "Overview of your account and stats" },
+  { icon: LayoutDashboard, label: "Campaign Agent", path: "/deploy", tooltip: "Deploy your AI campaign agent" },
+  { icon: List, label: "Past Listings", path: "/listings", tooltip: "View your past listing kits and social copy" },
   { icon: Fingerprint, label: "Brand DNA", path: "/brand-dna", tooltip: "Manage your brand identity" },
-  //{ icon: Library, label: "Asset Factory", path: "/assets", tooltip: "Create and manage your assets" },
-  //{ icon: Hexagon, label: "MetaShop 3D", path: "/3d-studio", tooltip: "Create 3D models and scenes" },
-  //{ icon: Wand2, label: "Workspace", path: "/workspace", tooltip: "Create and enhance images with AI" },
-  //{ icon: History, label: "History", path: "/history", tooltip: "View all your previously generated images" },
   { icon: CreditCard, label: "Billing", path: "/billing", tooltip: "Manage your subscription and buy credits" },
   { icon: User, label: "Profile", path: "/profile", tooltip: "Update your account settings" },
 ];

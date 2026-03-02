@@ -236,8 +236,8 @@ export const api = {
   },
   
   // UPDATE: Pass userId when creating jobs
-  createPhotoJob: async (fileTypes: string[], userId?: string) => {
-    const res = await axiosInstance.post('/create-photos-only-job', { fileTypes, userId });
+  createPhotoJob: async (fileTypes: string[], userId?: string, productName?: string, productUrl?: string) => {
+    const res = await axiosInstance.post('/create-photos-only-job', { fileTypes, userId, productName, productUrl });
     return res.data;
   },
   

@@ -17,6 +17,7 @@ import NotFound from "./pages/NotFound";
 import MissionControl from "./pages/MissionControl";
 import BrandDNA from "./pages/BrandDNA";
 import DeployAgent from "./pages/DeployAgent";
+import Listings from "./pages/Listings";
 import AuthCallback from "./pages/AuthCallback";
 
 const queryClient = new QueryClient({
@@ -71,6 +72,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <DeployAgent />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/listings"
+              element={
+                <ProtectedRoute>
+                  <Listings />
                 </ProtectedRoute>
               }
             />

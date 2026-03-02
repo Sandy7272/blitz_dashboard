@@ -11,18 +11,14 @@ import {
 
 const mainNavItems = [
   { label: "Listing Kit", path: "/", icon: "🧩" },
-  { label: "Mission Control", path: "/missions", icon: "📊" },
-  { label: "Workspace", path: "/workspace", icon: "✨" },
-  { label: "History", path: "/history", icon: "📁" },
+  { label: "Campaign Agent", path: "/deploy", icon: "⚡" },
+  { label: "Past Listings", path: "/listings", icon: "📚" },
+  { label: "Brand DNA", path: "/brand-dna", icon: "🧬" },
   { label: "Billing", path: "/billing", icon: "💳" },
   { label: "Profile", path: "/profile", icon: "👤" },
 ];
 
-const workflowItems = [
-  { label: "Apparel Photography", path: "/workspace?type=apparel", icon: "👔" },
-  { label: "Food Photography", path: "/workspace?type=food", icon: "🍕" },
-  { label: "Site Doctor", path: "/workspace?type=audit", icon: "🔍" },
-];
+const workflowItems = [];
 
 export function MobileHeader() {
   const [isOpen, setIsOpen] = useState(false);
