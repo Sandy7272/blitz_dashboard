@@ -77,6 +77,21 @@ export default function DeployAgent() {
   const [shopifyShop, setShopifyShop] = useState<string | null>(null);
   const [shopifyConnected, setShopifyConnected] = useState(false);
 
+  // Product Details State - NEW FORM FIELDS
+  const [productCategory, setProductCategory] = useState("");
+  const [productDescription, setProductDescription] = useState("");
+  const [productFeatures, setProductFeatures] = useState<string>("");
+  const [productColors, setProductColors] = useState("");
+  const [productSizes, setProductSizes] = useState("");
+  const [productMaterial, setProductMaterial] = useState("");
+  const [productBrand, setProductBrand] = useState("");
+  const [productOrigin, setProductOrigin] = useState("");
+  const [productTargetAudience, setProductTargetAudience] = useState("");
+  const [productUseCase, setProductUseCase] = useState("");
+
+  // Product Details Step Index - Track if we're on the "add details" step
+  const [productDetailsStep, setProductDetailsStep] = useState<"upload" | "details" | "generate">("upload");
+
   // 3. FETCH DNA FROM API (Replaces localStorage)
   useEffect(() => {
     if (!user?.sub) return;
@@ -267,6 +282,21 @@ const handleDeployToStore = async () => {
     try {
       setListingStatus("uploading");
       const fileTypes = listingFiles.map((f) => f.type);
+      
+      // Collect product details for AI generation
+      const productDetails = {
+        category: productCategory,
+        brand: productBrand,
+        colors: productColors.split(',').map(c => c.trim()).filter(Boolean),
+        sizes: productSizes,
+        material: productMaterial,
+        origin: productOrigin,
+        description: productDescription,
+        features: productFeatures.split(',').map(f => f.trim()).filter(Boolean),
+        targetAudience: productTargetAudience,
+        useCase: productUseCase
+      };
+
       const jobData = await api.createPhotoJob(
         fileTypes,
         user?.sub,
@@ -284,7 +314,12 @@ const handleDeployToStore = async () => {
       setListingPushStatus("idle");
       setListingSocialCopy(null);
       setListingManualStage(null);
-      await api.startProcessing(jobId, "listing_kit", {});
+      
+      // Pass product details to backend for better AI-generated copy
+      await api.startProcessing(jobId, "listing_kit", {
+        product_details: productDetails
+      });
+      
       pollListingStatus(jobId);
       toast.success("Listing kit started. Generating assets...");
     } catch (e) {
@@ -726,6 +761,110 @@ const handleDeployToStore = async () => {
                       placeholder="Paste a product page to pull extra angle refs"
                       className="input-glass w-full"
                     />
+                  </div>
+
+                  {/* Product Details Form - New Step */}
+                  <div className="border-2 border-dashed border-white/10 bg-black/20 rounded-2xl p-8 hover:border-primary/50 transition-colors">
+                    <h3 className="text-lg font-bold mb-4">Product Details</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">Category</label>
+                        <select
+                          value={productCategory}
+                          onChange={(e) => setProductCategory(e.target.value)}
+                          className="input-glass w-full"
+                        >
+                          <option value="">Select category</option>
+                          <option value="furniture">Furniture</option>
+                          <option value="decor">Home Decor</option>
+                          <option value="lighting">Lighting</option>
+                          <option value="textiles">Textiles</option>
+                          <option value="storage">Storage</option>
+                          <option value="outdoor">Outdoor</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">Brand</label>
+                        <input
+                          value={productBrand}
+                          onChange={(e) => setProductBrand(e.target.value)}
+                          placeholder="e.g., West Elm"
+                          className="input-glass w-full"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">Colors</label>
+                        <input
+                          value={productColors}
+                          onChange={(e) => setProductColors(e.target.value)}
+                          placeholder="e.g., Navy Blue, Gray"
+                          className="input-glass w-full"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">Sizes/Dimensions</label>
+                        <input
+                          value={productSizes}
+                          onChange={(e) => setProductSizes(e.target.value)}
+                          placeholder={`e.g., 24" x 24" x 30"`}
+                          className="input-glass w-full"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">Material</label>
+                        <input
+                          value={productMaterial}
+                          onChange={(e) => setProductMaterial(e.target.value)}
+                          placeholder="e.g., Italian Leather, Oak Wood"
+                          className="input-glass w-full"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">Origin</label>
+                        <input
+                          value={productOrigin}
+                          onChange={(e) => setProductOrigin(e.target.value)}
+                          placeholder="e.g., Made in Italy"
+                          className="input-glass w-full"
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-xs text-muted-foreground">Description</label>
+                        <textarea
+                          value={productDescription}
+                          onChange={(e) => setProductDescription(e.target.value)}
+                          placeholder="Detailed product description with features, benefits, and details..."
+                          className="input-glass w-full h-24 resize-none"
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-xs text-muted-foreground">Product Features (comma separated)</label>
+                        <input
+                          value={productFeatures}
+                          onChange={(e) => setProductFeatures(e.target.value)}
+                          placeholder="e.g., Adjustable height, Removable cushions, Scratch-resistant"
+                          className="input-glass w-full"
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-xs text-muted-foreground">Target Audience</label>
+                        <input
+                          value={productTargetAudience}
+                          onChange={(e) => setProductTargetAudience(e.target.value)}
+                          placeholder="e.g., Urban millennials, Interior designers"
+                          className="input-glass w-full"
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-xs text-muted-foreground">Use Case</label>
+                        <input
+                          value={productUseCase}
+                          onChange={(e) => setProductUseCase(e.target.value)}
+                          placeholder="e.g., Perfect for modern living rooms and home offices"
+                          className="input-glass w-full"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="border-2 border-dashed border-white/10 bg-black/20 rounded-2xl p-10 text-center hover:border-primary/50 transition-colors relative group">

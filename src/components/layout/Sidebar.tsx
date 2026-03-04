@@ -13,6 +13,7 @@ import {
   Library,
   List
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/auth";
@@ -62,11 +63,15 @@ export function Sidebar() {
   return (
     <div className="h-screen w-64 bg-background border-r border-border flex flex-col fixed left-0 top-0">
       <div className="p-6">
-        <div className="flex items-center gap-2 mb-8">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="font-display font-bold text-black text-xl">B</span>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="font-display font-bold text-black text-xl">B</span>
+            </div>
+            <span className="font-display font-bold text-xl tracking-tight">⚡️ Blitz Agent</span>
           </div>
-          <span className="font-display font-bold text-xl tracking-tight">⚡️ Blitz Agent</span>
+          
+          <ThemeToggle />
         </div>
 
         <nav className="space-y-2">
