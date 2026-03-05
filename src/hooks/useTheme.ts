@@ -92,10 +92,7 @@ export function useTheme() {
     if (storedTheme && (savedConfig.theme === DEFAULT_THEME) && (savedConfig.theme !== storedTheme)) {
       await setTheme(storedTheme);
     } else if (!savedConfig.initialLoadComplete) {
-      // Check system preference if no stored theme
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const defaultTheme: Theme = systemPrefersDark ? 'dark' : 'light';
-      await setTheme(defaultTheme);
+      await setTheme(DEFAULT_THEME);
     }
     
     useThemeStore.setState({ initialLoadComplete: true });

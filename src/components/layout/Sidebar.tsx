@@ -11,7 +11,8 @@ import {
   Fingerprint,
   Hexagon,
   Library,
-  List
+  List,
+  Image
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ interface NavItem {
 const menuItems: NavItem[] = [
   { icon: Zap, label: "Listing Kit", path: "/" , tooltip: "Generate listings and push to Shopify" },
   { icon: LayoutDashboard, label: "Campaign Agent", path: "/deploy", tooltip: "Deploy your AI campaign agent" },
+  { icon: Image, label: "Studio", path: "/workspace?type=apparel", tooltip: "Model, food, holiday, and staging workflows" },
   { icon: List, label: "Past Listings", path: "/listings", tooltip: "View your past listing kits and social copy" },
   { icon: Fingerprint, label: "Brand DNA", path: "/brand-dna", tooltip: "Manage your brand identity" },
   { icon: CreditCard, label: "Billing", path: "/billing", tooltip: "Manage your subscription and buy credits" },

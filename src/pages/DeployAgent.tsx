@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, type JobStatusResponse } from "@/lib/api";
-import { Link as RouterLink, useNavigate, useSearchParams } from "react-router-dom";
+import { Link as RouterLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 
 // Types for our Mission Config
@@ -29,10 +29,10 @@ interface MissionConfig {
 
 export default function DeployAgent() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth0(); // 2. Get User
 
-  // Page Mode (Listing Kit is primary)
-  const [mode, setMode] = useState<"campaign" | "listing">("listing");
+  const isCampaignRoute = location.pathname === "/deploy";
   
   // 1. Load Brand DNA (The Brain)
   const [brandDNA, setBrandDNA] = useState<{colors: any, voice: string} | null>(null);
@@ -146,7 +146,7 @@ export default function DeployAgent() {
 
   // 4. Fetch Shopify products for picker (Listing Kit only)
   useEffect(() => {
-    if (mode !== "listing" || !user?.sub) return;
+    if (isCampaignRoute || !user?.sub) return;
 
     const loadProducts = async () => {
       setProductsLoading(true);
@@ -162,7 +162,7 @@ export default function DeployAgent() {
     };
 
     loadProducts();
-  }, [mode, user]);
+  }, [isCampaignRoute, user]);
 
   // 1. Function to Trigger the Update
 const handleDeployToStore = async () => {
@@ -600,31 +600,7 @@ const handleDeployToStore = async () => {
             </button>
           </div>
         </div>
-        {/* Mode Toggle */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setMode("campaign")}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition ${
-              mode === "campaign"
-                ? "bg-primary text-black"
-                : "bg-white/5 text-muted-foreground hover:text-white"
-            }`}
-          >
-            Campaign
-          </button>
-          <button
-            onClick={() => setMode("listing")}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition ${
-              mode === "listing"
-                ? "bg-primary text-black"
-                : "bg-white/5 text-muted-foreground hover:text-white"
-            }`}
-          >
-            Listing Kit
-          </button>
-        </div>
-
-        {mode === "campaign" ? (
+        {isCampaignRoute ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* LEFT COLUMN */}
             <div className="lg:col-span-2 space-y-6">

@@ -3,6 +3,7 @@ import { Menu, Zap, Settings, LogOut, ChevronRight } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import {
   Sheet,
   SheetContent,
@@ -12,6 +13,7 @@ import {
 const mainNavItems = [
   { label: "Listing Kit", path: "/", icon: "🧩" },
   { label: "Campaign Agent", path: "/deploy", icon: "⚡" },
+  { label: "Studio", path: "/workspace?type=apparel", icon: "🎬" },
   { label: "Past Listings", path: "/listings", icon: "📚" },
   { label: "Brand DNA", path: "/brand-dna", icon: "🧬" },
   { label: "Billing", path: "/billing", icon: "💳" },
@@ -75,6 +77,9 @@ export function MobileHeader() {
             <Zap className="w-3 h-3" />
             1,250
           </div>
+          <div className="hidden sm:block">
+            <ThemeToggle />
+          </div>
 
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
@@ -116,6 +121,7 @@ export function MobileHeader() {
                         </>
                       )}
                     </div>
+                    <ThemeToggle />
                   </div>
                 </div>
 

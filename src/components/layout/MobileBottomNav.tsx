@@ -4,7 +4,8 @@ import {
   Fingerprint,
   CreditCard,
   User,
-  List
+  List,
+  Image
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -12,6 +13,7 @@ import { motion } from "framer-motion";
 const navItems = [
   { icon: Zap, label: "Listing Kit", path: "/" },
   { icon: LayoutDashboard, label: "Campaign", path: "/deploy" },
+  { icon: Image, label: "Studio", path: "/workspace?type=apparel" },
   { icon: List, label: "Listings", path: "/listings" },
   { icon: Fingerprint, label: "DNA", path: "/brand-dna" },
   { icon: CreditCard, label: "Billing", path: "/billing" },

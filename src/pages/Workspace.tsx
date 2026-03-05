@@ -46,6 +46,30 @@ const workflowTypes = {
     credits: 5,
     accepts: "image/*",
   },
+  holiday: {
+    backendMode: "holiday_ad",
+    title: "Holiday Ad Studio",
+    subtitle: "Seasonal Creative",
+    description: "Turn a product photo into a festive ad creative with styled lighting and atmosphere.",
+    uploadHint: "Drop your product photo here",
+    uploadSubHint: "JPG, PNG, or WebP • Max 10MB",
+    emptyResultText: "Your holiday creative will appear here",
+    processingText: "Designing a holiday ad...",
+    credits: 5,
+    accepts: "image/*",
+  },
+  staging: {
+    backendMode: "virtual_staging",
+    title: "Virtual Staging",
+    subtitle: "Lifestyle Room Setups",
+    description: "Place your product into styled environments for realistic lifestyle shots.",
+    uploadHint: "Drop your product photo here",
+    uploadSubHint: "JPG, PNG, or WebP • Max 10MB",
+    emptyResultText: "Your staged image will appear here",
+    processingText: "Staging your product...",
+    credits: 5,
+    accepts: "image/*",
+  },
   audit: {
     backendMode: "audit",
     title: "Site Doctor",
@@ -155,7 +179,9 @@ export default function Workspace() {
         setProgress(15);
         await api.uploadToS3(uploadUrl, file);
         setProgress(40);
-        await api.startProcessing(jobId, workflow.backendMode, {});
+        await api.startProcessing(jobId, workflow.backendMode, {
+          whatsapp_user_id: user?.sub,
+        });
       }
 
       setActiveJobId(jobId);
@@ -184,6 +210,12 @@ export default function Workspace() {
 
   const isAudit = type === "audit";
   const canGenerate = isAudit ? url.trim().length > 0 : !!file;
+  const modeCards = [
+    { key: "apparel", label: "Apparel", subtitle: "Model Shoot" },
+    { key: "food", label: "Food", subtitle: "Photography" },
+    { key: "holiday", label: "Holiday", subtitle: "Ad Studio" },
+    { key: "staging", label: "Staging", subtitle: "Lifestyle" },
+  ];
 
   return (
     <DashboardLayout>
@@ -217,6 +249,29 @@ export default function Workspace() {
           <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">{workflow.title}</h1>
           <p className="text-muted-foreground text-sm md:text-base">{workflow.description}</p>
         </motion.div>
+        {!isAudit && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+            {modeCards.map((card) => {
+              const isActive = card.key === type;
+              return (
+                <button
+                  key={card.key}
+                  onClick={() => {
+                    window.location.assign(`/workspace?type=${card.key}`);
+                  }}
+                  className={`text-left p-4 rounded-2xl border transition ${
+                    isActive
+                      ? "border-primary/40 bg-primary/10"
+                      : "border-white/10 bg-black/30 hover:border-white/20"
+                  }`}
+                >
+                  <p className="text-xs text-muted-foreground">{card.subtitle}</p>
+                  <p className="text-sm font-semibold">{card.label}</p>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Panel */}
