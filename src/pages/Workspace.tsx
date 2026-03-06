@@ -1,18 +1,22 @@
 import { useState, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Upload, 
-  Link as LinkIcon, 
-  Wand2, 
-  Download, 
+import {
+  Upload,
+  Link as LinkIcon,
+  Wand2,
+  Download,
   RefreshCw,
   X,
   Image as ImageIcon,
   Loader2,
   ArrowLeftRight,
   Info,
-  CheckCircle2
+  CheckCircle2,
+  Shirt,
+  UtensilsCrossed,
+  Gift,
+  Home
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { HintTooltip } from "@/components/onboarding/HintTooltip";
@@ -20,6 +24,11 @@ import { FeatureTooltip } from "@/components/onboarding/FeatureTooltip";
 import { api } from "@/lib/api"; // Ensure this import exists
 import { toast } from "sonner";
 import { useAuth0 } from "@auth0/auth0-react";
+import { WorkflowOptionsProvider } from "@/components/workflow-options/WorkflowOptionsContext";
+import { ApparelOptions } from "@/components/workflow-options/ApparelOptions";
+import { FoodOptions } from "@/components/workflow-options/FoodOptions";
+import { HolidayOptions } from "@/components/workflow-options/HolidayOptions";
+import { StagingOptions } from "@/components/workflow-options/StagingOptions";
 
 const workflowTypes = {
   apparel: {
@@ -210,17 +219,34 @@ export default function Workspace() {
 
   const isAudit = type === "audit";
   const canGenerate = isAudit ? url.trim().length > 0 : !!file;
+
+  // Render the appropriate options component based on workflow type
+  const renderWorkflowOptions = () => {
+    switch (type) {
+      case "apparel":
+        return <ApparelOptions />;
+      case "food":
+        return <FoodOptions />;
+      case "holiday":
+        return <HolidayOptions />;
+      case "staging":
+        return <StagingOptions />;
+      default:
+        return null;
+    }
+  };
+
   const modeCards = [
-    { key: "apparel", label: "Apparel", subtitle: "Model Shoot" },
-    { key: "food", label: "Food", subtitle: "Photography" },
-    { key: "holiday", label: "Holiday", subtitle: "Ad Studio" },
-    { key: "staging", label: "Staging", subtitle: "Lifestyle" },
+    { key: "apparel", label: "Apparel", subtitle: "Model Shoot", icon: Shirt },
+    { key: "food", label: "Food", subtitle: "Photography", icon: UtensilsCrossed },
+    { key: "holiday", label: "Holiday", subtitle: "Ad Studio", icon: Gift },
+    { key: "staging", label: "Staging", subtitle: "Lifestyle", icon: Home },
   ];
 
   return (
     <DashboardLayout>
       {showCreditModal && (
-        <div className="fixed inset-0 z-[120] bg-black/60 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[50] bg-black/60 flex items-center justify-center p-4">
           <div className="glass-card p-6 w-full max-w-md">
             <h3 className="text-lg font-bold mb-2">Insufficient Credits</h3>
             <p className="text-sm text-muted-foreground mb-4">
@@ -253,20 +279,30 @@ export default function Workspace() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
             {modeCards.map((card) => {
               const isActive = card.key === type;
+              const Icon = card.icon;
               return (
                 <button
                   key={card.key}
                   onClick={() => {
                     window.location.assign(`/workspace?type=${card.key}`);
                   }}
-                  className={`text-left p-4 rounded-2xl border transition ${
+                  className={`group relative overflow-hidden text-left p-4 rounded-2xl border transition-all duration-200 ${
                     isActive
-                      ? "border-primary/40 bg-primary/10"
-                      : "border-white/10 bg-black/30 hover:border-white/20"
+                      ? "border-primary/50 bg-gradient-to-br from-primary/20 to-primary/5 shadow-lg shadow-primary/10"
+                      : "border-white/10 bg-black/30 hover:border-white/20 hover:bg-black/40"
                   }`}
                 >
-                  <p className="text-xs text-muted-foreground">{card.subtitle}</p>
-                  <p className="text-sm font-semibold">{card.label}</p>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-all duration-200 ${
+                    isActive
+                      ? "bg-primary text-background shadow-lg shadow-primary/30"
+                      : "bg-white/5 text-muted-foreground group-hover:bg-white/10 group-hover:text-foreground"
+                  }`}>
+                    <Icon className="w-5 h-5" strokeWidth={2.5} />
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-1">{card.subtitle}</p>
+                  <p className={`text-sm font-semibold transition-colors ${
+                    isActive ? "text-foreground" : "text-foreground/90"
+                  }`}>{card.label}</p>
                 </button>
               );
             })}
@@ -311,6 +347,21 @@ export default function Workspace() {
                 )}
               </div>
             </HintTooltip>
+
+            {/* Options Section - Only for photo workflows */}
+            {!isAudit && (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="glass-card p-6"
+              >
+                <h3 className="text-lg font-semibold text-foreground mb-4">Step 2: Customize Your Options</h3>
+                <WorkflowOptionsProvider>
+                  {renderWorkflowOptions()}
+                </WorkflowOptionsProvider>
+              </motion.div>
+            )}
 
             {/* Generate Button */}
             <div className="glass-card p-6">

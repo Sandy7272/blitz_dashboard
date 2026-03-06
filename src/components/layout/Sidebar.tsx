@@ -1,10 +1,10 @@
 import { motion } from "framer-motion";
-import { 
-  LayoutDashboard, 
-  Wand2, 
-  History, 
-  CreditCard, 
-  User, 
+import {
+  LayoutDashboard,
+  Wand2,
+  History,
+  CreditCard,
+  User,
   Settings,
   LogOut,
   Zap,
@@ -12,7 +12,8 @@ import {
   Hexagon,
   Library,
   List,
-  Image
+  Image,
+  Globe
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ const menuItems: NavItem[] = [
   { icon: Zap, label: "Listing Kit", path: "/" , tooltip: "Generate listings and push to Shopify" },
   { icon: LayoutDashboard, label: "Campaign Agent", path: "/deploy", tooltip: "Deploy your AI campaign agent" },
   { icon: Image, label: "Studio", path: "/workspace?type=apparel", tooltip: "Model, food, holiday, and staging workflows" },
+  { icon: Globe, label: "Website Scanner", path: "/scanner", tooltip: "Discover product URLs from any website" },
   { icon: List, label: "Past Listings", path: "/listings", tooltip: "View your past listing kits and social copy" },
   { icon: Fingerprint, label: "Brand DNA", path: "/brand-dna", tooltip: "Manage your brand identity" },
   { icon: CreditCard, label: "Billing", path: "/billing", tooltip: "Manage your subscription and buy credits" },
@@ -67,8 +69,8 @@ export function Sidebar() {
       <div className="p-6">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="font-display font-bold text-black text-xl">B</span>
+            <div className="w-8 h-8 bg-background border-2 border-primary rounded-lg flex items-center justify-center">
+              <span className="font-display font-bold text-primary text-xl">B</span>
             </div>
             <span className="font-display font-bold text-xl tracking-tight">⚡️ Blitz Agent</span>
           </div>

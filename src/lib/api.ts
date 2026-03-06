@@ -97,6 +97,12 @@ export interface JobStatusResponse {
     caption: string;
     hashtags: string[];
   } | string;
+  // Product discovery results
+  product_urls?: Array<{
+    url: string;
+    type: "product" | "category" | "sitemap" | "internal";
+    confidence: number;
+  }>;
 }
 
 export interface DashboardStats {

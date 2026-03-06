@@ -20,6 +20,7 @@ import BrandDNA from "./pages/BrandDNA";
 import DeployAgent from "./pages/DeployAgent";
 import Listings from "./pages/Listings";
 import AuthCallback from "./pages/AuthCallback";
+import WebsiteScanner from "./pages/WebsiteScanner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -87,6 +88,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Listings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/scanner"
+              element={
+                <ProtectedRoute>
+                  <WebsiteScanner />
                 </ProtectedRoute>
               }
             />

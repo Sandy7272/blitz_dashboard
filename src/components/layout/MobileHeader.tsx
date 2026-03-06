@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Menu, Zap, Settings, LogOut, ChevronRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Menu, Zap, Settings, LogOut, ChevronRight, Loader2 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/auth";
+import { api } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import {
@@ -24,8 +25,23 @@ const workflowItems = [];
 
 export function MobileHeader() {
   const [isOpen, setIsOpen] = useState(false);
+  const [credits, setCredits] = useState<number | null>(null);
   const location = useLocation();
   const { user, logout, isAuthenticated, login } = useAuth();
+
+  // Fetch credits from API
+  useEffect(() => {
+    if (!user?.sub) return;
+    const loadCredits = async () => {
+      try {
+        const profile = await api.getUserProfile(user.sub);
+        setCredits(profile.credits ?? 0);
+      } catch (e) {
+        console.error("Failed to load credits", e);
+      }
+    };
+    loadCredits();
+  }, [user]);
 
   const isActive = (path: string) => {
     if (path.includes("?")) {
@@ -56,7 +72,7 @@ export function MobileHeader() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 lg:hidden">
+    <header className="fixed top-0 left-0 right-0 z-40 lg:hidden">
       {/* Glassmorphism background */}
       <div className="absolute inset-0 bg-sidebar/95 backdrop-blur-xl border-b border-sidebar-border" />
       
@@ -73,10 +89,13 @@ export function MobileHeader() {
 
         {/* Credit Pill & Menu */}
         <div className="flex items-center gap-3">
-          <div className="credit-pill text-xs py-1.5 px-3">
+          <Link
+            to="/billing"
+            className="credit-pill text-xs py-1.5 px-3 hover:bg-primary/20 transition-colors"
+          >
             <Zap className="w-3 h-3" />
-            1,250
-          </div>
+            {credits !== null ? credits.toLocaleString() : <Loader2 className="w-3 h-3 animate-spin inline" />}
+          </Link>
           <div className="hidden sm:block">
             <ThemeToggle />
           </div>
