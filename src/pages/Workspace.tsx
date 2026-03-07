@@ -24,7 +24,7 @@ import { FeatureTooltip } from "@/components/onboarding/FeatureTooltip";
 import { api } from "@/lib/api"; // Ensure this import exists
 import { toast } from "sonner";
 import { useAuth0 } from "@auth0/auth0-react";
-import { WorkflowOptionsProvider } from "@/components/workflow-options/WorkflowOptionsContext";
+import { WorkflowOptionsProvider, useWorkflowOptions } from "@/components/workflow-options/WorkflowOptionsContext";
 import { ApparelOptions } from "@/components/workflow-options/ApparelOptions";
 import { FoodOptions } from "@/components/workflow-options/FoodOptions";
 import { HolidayOptions } from "@/components/workflow-options/HolidayOptions";
@@ -93,11 +93,21 @@ const workflowTypes = {
   },
 };
 
-export default function Workspace() {
+function toTitleCase(input: string) {
+  return (input || "")
+    .replace(/[-_]/g, " ")
+    .split(" ")
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ")
+    .trim();
+}
+
+function WorkspaceInner() {
   const [searchParams] = useSearchParams();
   const type = (searchParams.get("type") as keyof typeof workflowTypes) || "apparel";
   const workflow = workflowTypes[type];
   const { user } = useAuth0();
+  const { getConfigForWorkflow } = useWorkflowOptions();
 
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -188,9 +198,76 @@ export default function Workspace() {
         setProgress(15);
         await api.uploadToS3(uploadUrl, file);
         setProgress(40);
-        await api.startProcessing(jobId, workflow.backendMode, {
+        const baseConfig: Record<string, unknown> = {
           whatsapp_user_id: user?.sub,
-        });
+        };
+        if (type === "apparel") {
+          const apparel: any = getConfigForWorkflow("apparel");
+          const config = {
+            ...baseConfig,
+            ethnicity: toTitleCase(apparel.ethnicity),
+            gender: toTitleCase(apparel.modelGender),
+            age_range: apparel.ageRange,
+            skin_tone: toTitleCase(apparel.skinTone),
+            hair_style: toTitleCase(apparel.hairStyle),
+            hair_color: toTitleCase(apparel.hairColor),
+            pose: toTitleCase(apparel.pose),
+            background: toTitleCase(apparel.backgroundType),
+            lighting: toTitleCase(apparel.lightingStyle),
+            image_style: toTitleCase(apparel.imageStyle),
+            custom_prompt: apparel.customPrompt || "",
+            style_description: `${toTitleCase(apparel.imageStyle)} style, ${toTitleCase(apparel.lightingStyle)} lighting`,
+          };
+          await api.startProcessing(jobId, workflow.backendMode, config);
+        } else if (type === "food") {
+          const food: any = getConfigForWorkflow("food");
+          const config = {
+            ...baseConfig,
+            setting_type: toTitleCase(food.settingType),
+            lighting: toTitleCase(food.lighting),
+            styling: toTitleCase(food.styling),
+            background: toTitleCase(food.backgroundTreatment),
+            color_grade: toTitleCase(food.colorGrade),
+            image_ratio: food.imageRatio,
+            props: Array.isArray(food.props) ? food.props.map((p: string) => toTitleCase(p)) : [],
+            custom_prompt: food.customPrompt || "",
+            style_description: `${toTitleCase(food.colorGrade)} color grade, ${toTitleCase(food.lighting)} lighting`,
+          };
+          await api.startProcessing(jobId, workflow.backendMode, config);
+        } else if (type === "holiday") {
+          const holiday: any = getConfigForWorkflow("holiday");
+          const config = {
+            ...baseConfig,
+            holiday_type: toTitleCase(holiday.holidayType),
+            theme_mood: toTitleCase(holiday.themeMood),
+            color_scheme: toTitleCase(holiday.colorScheme),
+            decorations_level: toTitleCase(holiday.decorationsLevel),
+            background_style: toTitleCase(holiday.backgroundStyle),
+            style_variant: toTitleCase(holiday.styleVariant),
+            text_overlay: Boolean(holiday.textOverlay),
+            custom_prompt: holiday.customPrompt || "",
+            style_description: `${toTitleCase(holiday.themeMood)} mood, ${toTitleCase(holiday.colorScheme)} palette`,
+          };
+          await api.startProcessing(jobId, workflow.backendMode, config);
+        } else if (type === "staging") {
+          const staging: any = getConfigForWorkflow("staging");
+          const config = {
+            ...baseConfig,
+            staging_type: toTitleCase(staging.stagingType ?? staging.roomType),
+            composition: toTitleCase(staging.compositionType),
+            camera_angle: toTitleCase(staging.cameraAngle),
+            depth_of_field: toTitleCase(staging.depthOfField),
+            lighting_setup: toTitleCase(staging.lightingSetup),
+            surface_texture: toTitleCase(staging.surfaceTexture),
+            reflective_surface: Boolean(staging.reflectiveSurface),
+            glass_elements: Boolean(staging.glassElements),
+            custom_prompt: staging.customPrompt || "",
+            style_description: `${toTitleCase(staging.lightingSetup)} lighting, ${toTitleCase(staging.surfaceTexture)} texture`,
+          };
+          await api.startProcessing(jobId, workflow.backendMode, config);
+        } else {
+          await api.startProcessing(jobId, workflow.backendMode, baseConfig);
+        }
       }
 
       setActiveJobId(jobId);
@@ -308,7 +385,6 @@ export default function Workspace() {
             })}
           </div>
         )}
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Panel */}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="space-y-6">
@@ -357,9 +433,7 @@ export default function Workspace() {
                 className="glass-card p-6"
               >
                 <h3 className="text-lg font-semibold text-foreground mb-4">Step 2: Customize Your Options</h3>
-                <WorkflowOptionsProvider>
-                  {renderWorkflowOptions()}
-                </WorkflowOptionsProvider>
+                {renderWorkflowOptions()}
               </motion.div>
             )}
 
@@ -457,5 +531,13 @@ export default function Workspace() {
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function Workspace() {
+  return (
+    <WorkflowOptionsProvider>
+      <WorkspaceInner />
+    </WorkflowOptionsProvider>
   );
 }
