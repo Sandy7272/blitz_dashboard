@@ -14,6 +14,11 @@ interface ListingJob {
   listing_description?: string;
   listing_features?: string[];
   all_results?: Array<{ format: string; url: string }>;
+  result_urls?: string[];
+  result_url?: string;
+  clean_studio_photo_url?: string;
+  clean_lifestyle_photo_urls?: string[];
+  clean_collage_url?: string;
   social_copy?: any;
   tier?: string;
   mode?: string;
@@ -30,15 +35,15 @@ export default function Listings() {
     const fetchJobs = async () => {
       try {
         const data = await api.getUserMissions(user.sub);
-        // Include listing kits and photo generations (apparel, food, holiday, staging)
+        // Include listing kits and studio generations
         const listingJobs = (data || []).filter(
           (job: any) =>
             job?.tier === "photos" ||
             job?.mode === "listing_kit" ||
-            job?.mode === "apparel" ||
-            job?.mode === "food" ||
-            job?.mode === "holiday" ||
-            job?.mode === "staging"
+            job?.mode === "model_shoot" ||
+            job?.mode === "food_photography" ||
+            job?.mode === "holiday_ad" ||
+            job?.mode === "virtual_staging"
         );
         if (mounted) setJobs(listingJobs);
       } catch (e) {
@@ -61,6 +66,34 @@ export default function Listings() {
       return bt - at;
     });
   }, [jobs]);
+
+  const getBadgeLabel = (job: ListingJob) => {
+    if (job.mode === "listing_kit") return "Listing Kit";
+    if (job.mode === "model_shoot") return "Apparel Studio";
+    if (job.mode === "food_photography") return "Food Studio";
+    if (job.mode === "holiday_ad") return "Holiday Studio";
+    if (job.mode === "virtual_staging") return "Staging Studio";
+    return "Studio";
+  };
+
+  const getImages = (job: ListingJob) => {
+    if (job.all_results && job.all_results.length > 0) {
+      return job.all_results.map((img) => img.url);
+    }
+    if (job.result_urls && job.result_urls.length > 0) {
+      return job.result_urls;
+    }
+    if (job.result_url) {
+      return [job.result_url];
+    }
+    if (job.clean_studio_photo_url) {
+      const imgs = [job.clean_studio_photo_url];
+      if (job.clean_lifestyle_photo_urls?.length) imgs.push(...job.clean_lifestyle_photo_urls);
+      if (job.clean_collage_url) imgs.push(job.clean_collage_url);
+      return imgs;
+    }
+    return [];
+  };
 
   return (
     <DashboardLayout>
@@ -86,11 +119,11 @@ export default function Listings() {
                       {job.created_at ? new Date(job.created_at).toLocaleString() : "—"}
                     </p>
                     <h3 className="text-lg font-bold">
-                      {job.listing_title || "Untitled Listing"}
+                      {job.listing_title || getBadgeLabel(job)}
                     </h3>
                   </div>
                   <span className="text-[10px] px-2 py-1 rounded uppercase font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                    Listing Kit
+                    {getBadgeLabel(job)}
                   </span>
                 </div>
 
@@ -126,16 +159,16 @@ export default function Listings() {
                             <ImageIcon className="w-3 h-3" /> Generated Images
                           </h4>
                         </div>
-                        {job.all_results && job.all_results.length > 0 ? (
+                        {getImages(job).length > 0 ? (
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                            {job.all_results.map((img, i) => (
+                            {getImages(job).map((url, i) => (
                               <div
                                 key={`${job.id}-img-${i}`}
                                 className="relative aspect-square rounded-md overflow-hidden border border-white/10 bg-black/40"
                               >
                                 <img
-                                  src={img.url}
-                                  alt={img.format}
+                                  src={url}
+                                  alt={`generated-${i}`}
                                   className="w-full h-full object-cover"
                                 />
                               </div>
@@ -374,11 +407,7 @@ export default function Listings() {
                       </div>
 
                       {/* No images message */}
-                      {(!job.all_results || job.all_results.length === 0) &&
-                        !job.result_urls &&
-                        !job.clean_studio_photo_url &&
-                        !job.clean_lifestyle_photo_urls &&
-                        !job.clean_collage_url && (
+                      {getImages(job).length === 0 && (
                           <p className="text-sm text-muted-foreground text-center py-8">No images generated for this job.</p>
                         )}
                     </div>
@@ -392,4 +421,3 @@ export default function Listings() {
     </DashboardLayout>
   );
 }
-
